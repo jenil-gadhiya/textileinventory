@@ -4,16 +4,16 @@ import { Catalog } from "../models/Catalog.js";
 export const createCatalog = asyncHandler(async (req, res) => {
   const { stockType, qualityId, designId, matchingIds, designIds, cut } = req.body;
 
+  let candidates = [];
+
   if (stockType === "Saree") {
     if (!cut || cut <= 0) {
       return res.status(400).json({ message: "Cut is required for Saree" });
     }
 
-    let entries = [];
-
     // Case 1: Multiple Designs (e.g. Grey Saree - behaves like Taka for selection)
     if (designIds && Array.isArray(designIds) && designIds.length > 0) {
-      entries = designIds.map((dId) => ({
+      candidates = designIds.map((dId) => ({
         stockType,
         qualityId,
         designId: dId,
@@ -30,7 +30,7 @@ export const createCatalog = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: "At least one matching is required for Saree" });
       }
 
-      entries = matchingIds.map((mId) => ({
+      candidates = matchingIds.map((mId) => ({
         stockType,
         qualityId,
         designId,
@@ -38,35 +38,67 @@ export const createCatalog = asyncHandler(async (req, res) => {
         cut
       }));
     }
-
-    const created = await Catalog.insertMany(entries);
-    const populated = await Catalog.find({ _id: { $in: created.map((c) => c._id) } })
-      .populate("qualityId", "fabricName loomType fabricType")
-      .populate("designId", "designNumber designName")
-      .populate("matchingId", "matchingName");
-    res.status(201).json(populated);
   } else if (stockType === "Taka") {
     // Create one entry per selected design
     if (!designIds || !Array.isArray(designIds) || designIds.length === 0) {
       return res.status(400).json({ message: "At least one design is required for Taka" });
     }
 
-    const entries = designIds.map((designId) => ({
+    candidates = designIds.map((designId) => ({
       stockType,
       qualityId,
       designId,
       matchingId: null,
       cut: null
     }));
+  } else {
+    return res.status(400).json({ message: "Invalid stockType. Must be 'Saree' or 'Taka'" });
+  }
 
-    const created = await Catalog.insertMany(entries);
+  // Deduplication Logic
+  // 1. Build query conditions
+  const conditions = candidates.map(c => ({
+    stockType: c.stockType,
+    qualityId: c.qualityId,
+    designId: c.designId,
+    matchingId: c.matchingId || null,
+    cut: c.cut || null
+  }));
+
+  // 2. Find existing
+  const existingDocs = await Catalog.find({ $or: conditions });
+
+  // 3. Filter candidates
+  const finalEntries = candidates.filter(cand => {
+    return !existingDocs.some(ext => {
+      const sameStock = ext.stockType === cand.stockType;
+      const sameQuality = String(ext.qualityId) === String(cand.qualityId);
+      const sameDesign = String(ext.designId) === String(cand.designId);
+
+      const extMatch = ext.matchingId ? String(ext.matchingId) : "null";
+      const candMatch = cand.matchingId ? String(cand.matchingId) : "null";
+      const sameMatching = extMatch === candMatch;
+
+      const extCut = ext.cut || 0;
+      const candCut = cand.cut || 0;
+      // Use tolerance for float comparison or just check strict equality if guaranteed to be saved same
+      // Mongoose stores numbers, strict equality usually fine for values entered via UI
+      const sameCut = Math.abs(extCut - candCut) < 0.001;
+
+      return sameStock && sameQuality && sameDesign && sameMatching && sameCut;
+    });
+  });
+
+  if (finalEntries.length > 0) {
+    const created = await Catalog.insertMany(finalEntries);
     const populated = await Catalog.find({ _id: { $in: created.map((c) => c._id) } })
       .populate("qualityId", "fabricName loomType fabricType")
       .populate("designId", "designNumber designName")
       .populate("matchingId", "matchingName");
-    res.status(201).json(populated);
+    return res.status(201).json(populated);
   } else {
-    res.status(400).json({ message: "Invalid stockType. Must be 'Saree' or 'Taka'" });
+    // No new entries created (all were duplicates)
+    return res.status(200).json([]);
   }
 });
 

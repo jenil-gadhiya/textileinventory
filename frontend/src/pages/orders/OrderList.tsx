@@ -64,14 +64,15 @@ export function OrderListPage() {
         // Reduced padding for mobile screens (approx 30-35 chars width)
         const pad = (str: string, length: number = 10) => str.padEnd(length, " ");
 
-        let message = ` *ORDER DETAILS*\n`;
-        message += "--------------------------------\n";
+        let message = "```\n"; // Start monospace block
+        message += `🕉️ ORDER DETAILS\n`;
+        message += "--------------------------------\n\n";
 
-        message += `${pad("Order No")} : *${order.orderNo}*\n`;
+        message += `${pad("Order No")} : ${order.orderNo}\n`;
         message += `${pad("Date")} : ${new Date(order.date).toLocaleDateString()}\n`;
-        if (party) message += `${pad("Party")} : *${party.toUpperCase()}*\n`;
+        if (party) message += `${pad("Party")} : ${party.toUpperCase()}\n`;
 
-        message += "\n *LINE ITEMS*\n\n";
+        message += "\n◆ LINE ITEMS\n\n";
 
         message += `  *FACTORY ${party.toUpperCase()}*\n`;
 
@@ -93,7 +94,9 @@ export function OrderListPage() {
 
                 item.matchingQuantities?.forEach(mq => {
                     const matching = mq.matchingId && typeof mq.matchingId === "object" ? mq.matchingId.matchingName : "Unknown";
-                    message += `   - ${pad(matching.substring(0, 10), 10)} : ${mq.quantity}\n`;
+                    // Clean matching name (remove extra spaces if any)
+                    const mName = matching.trim().substring(0, 10);
+                    message += `   - ${pad(mName, 10)} : ${mq.quantity}\n`;
                 });
 
                 // Total for this particular line item
@@ -106,13 +109,15 @@ export function OrderListPage() {
         // Grand Total Section
         message += "--------------------------------\n";
         if (grandTotalSarees > 0) {
-            message += `GRAND TOTAL    : ${grandTotalSarees} SAREES\n`;
+            message += `*GRAND TOTAL    : ${grandTotalSarees} SAREES*\n`;
         }
         message += "\n";
 
         if (order.remarks) {
-            message += ` Remarks: ${order.remarks}`;
+            message += `◆ Remarks: ${order.remarks}`;
         }
+
+        message += "\n```"; // End monospace block
 
         const encodedMessage = encodeURIComponent(message);
         const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;

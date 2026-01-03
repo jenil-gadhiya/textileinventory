@@ -291,15 +291,6 @@ export function CatalogFormPage() {
           <CardHeader>
             <div>
               <CardTitle>Catalog Details</CardTitle>
-              {/* DEBUG INFO - REMOVE AFTER FIX */}
-              <div className="bg-red-900/50 p-2 m-2 text-xs font-mono mb-4 text-white rounded">
-                DEBUG:
-                isSaree: {JSON.stringify(isSaree)} |
-                isGrey: {JSON.stringify(isGrey)} |
-                QID: {JSON.stringify(qualityId)} |
-                Name: {selectedQuality?.fabricName} |
-                Type: {selectedQuality?.fabricType}
-              </div>
               <div className="p-4">
                 {isEditMode
                   ? isSaree

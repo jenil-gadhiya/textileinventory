@@ -195,7 +195,7 @@ export function OrderEntryPage() {
                                     id="party"
                                     value={partyId}
                                     onChange={(e) => setPartyId(e.target.value)}
-                                    className="flex h-11 w-full rounded-md border border-white/10 bg-surface-200 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
+                                    className="flex h-11 w-full rounded-md border border-slate-200 dark:border-white/10 bg-surface-200 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
                                     required
                                 >
                                     <option value="">Select Party</option>
@@ -213,7 +213,7 @@ export function OrderEntryPage() {
                                     id="broker"
                                     value={brokerId}
                                     onChange={(e) => setBrokerId(e.target.value)}
-                                    className="flex h-11 w-full rounded-md border border-white/10 bg-surface-200 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
+                                    className="flex h-11 w-full rounded-md border border-slate-200 dark:border-white/10 bg-surface-200 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
                                 >
                                     <option value="">Select Broker (Optional)</option>
                                     {brokers.map((b) => (
@@ -230,7 +230,7 @@ export function OrderEntryPage() {
                                     id="salesman"
                                     value={salesmanId}
                                     onChange={(e) => setSalesmanId(e.target.value)}
-                                    className="flex h-11 w-full rounded-md border border-white/10 bg-surface-200 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
+                                    className="flex h-11 w-full rounded-md border border-slate-200 dark:border-white/10 bg-surface-200 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
                                 >
                                     <option value="">Select Salesman (Optional)</option>
                                     {salesmen.map((s) => (
@@ -288,9 +288,9 @@ export function OrderEntryPage() {
 
                         {/* Line Items Table */}
                         {lineItems.length > 0 && (
-                            <div className="border border-white/10 rounded-lg overflow-hidden">
+                            <div className="border border-slate-200 dark:border-white/10 rounded-lg overflow-hidden">
                                 <table className="w-full">
-                                    <thead className="bg-white/5">
+                                    <thead className="bg-surface-100">
                                         <tr>
                                             <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Quality</th>
                                             <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Design</th>
@@ -299,11 +299,11 @@ export function OrderEntryPage() {
                                             <th className="px-4 py-3 text-right text-xs font-semibold uppercase">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-white/5">
+                                    <tbody className="divide-y divide-slate-200 dark:divide-white/10">
                                         {lineItems.map((item, index) => {
                                             const display = getLineItemDisplay(item);
                                             return (
-                                                <tr key={index} className="hover:bg-white/5">
+                                                <tr key={index} className="hover:bg-surface-100">
                                                     <td className="px-4 py-3 text-sm">{display.quality}</td>
                                                     <td className="px-4 py-3 text-sm">{display.design}</td>
                                                     <td className="px-4 py-3 text-sm">{display.details}</td>

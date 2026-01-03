@@ -374,19 +374,19 @@ export function CatalogFormPage() {
                           : undefined
                       }
                     >
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-4 rounded-xl border border-white/10 bg-white/5">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-4 rounded-xl border border-slate-200 dark:border-white/10 bg-surface-100">
                         {sortedMatchings.map((matching) => (
                           <label
                             key={matching.id}
-                            className="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-2 rounded-lg transition-colors"
+                            className="flex items-center gap-2 cursor-pointer hover:bg-surface-200 p-2 rounded-lg transition-colors"
                           >
                             <input
                               type="checkbox"
                               checked={selectedMatchings.includes(matching.id)}
                               onChange={() => toggleMatching(matching.id)}
-                              className="w-4 h-4 rounded border-white/20 bg-white/5 text-neon-cyan focus:ring-neon-cyan/50"
+                              className="w-4 h-4 rounded border-border/20 bg-surface-100 text-neon-cyan focus:ring-neon-cyan/50"
                             />
-                            <span className="text-sm text-slate-200">
+                            <span className="text-sm text-body">
                               {matching.matchingName}
                             </span>
                           </label>
@@ -421,19 +421,19 @@ export function CatalogFormPage() {
                         : undefined
                     }
                   >
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-4 rounded-xl border border-white/10 bg-white/5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-4 rounded-xl border border-slate-200 dark:border-white/10 bg-surface-100">
                       {sortedDesigns.map((design) => (
                         <label
                           key={design.id}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-2 rounded-lg transition-colors"
+                          className="flex items-center gap-2 cursor-pointer hover:bg-surface-200 p-2 rounded-lg transition-colors"
                         >
                           <input
                             type="checkbox"
                             checked={selectedDesigns.includes(design.id)}
                             onChange={() => toggleDesign(design.id)}
-                            className="w-4 h-4 rounded border-white/20 bg-white/5 text-neon-cyan focus:ring-neon-cyan/50"
+                            className="w-4 h-4 rounded border-border/20 bg-surface-100 text-neon-cyan focus:ring-neon-cyan/50"
                           />
-                          <span className="text-sm text-slate-200">
+                          <span className="text-sm text-body">
                             {design.designNumber}
                           </span>
                         </label>

@@ -103,7 +103,7 @@ export function DashboardPage() {
           {/* Section 2: Production Trend & Top Items */}
           <div className="grid gap-4 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <Card className="bg-surface-100 border-white/5 h-full">
+              <Card className="bg-surface-100 border-slate-200 dark:border-white/10 h-full">
                 <CardHeader>
                   <CardTitle>Production Trend</CardTitle>
                   <CardDescription>Daily meters produced over the selected period.</CardDescription>
@@ -114,16 +114,16 @@ export function DashboardPage() {
               </Card>
             </div>
             <div>
-              <Card className="bg-surface-100 border-white/5 h-full">
+              <Card className="bg-surface-100 border-slate-200 dark:border-white/10 h-full">
                 <CardHeader>
                   <CardTitle>Top Selling Qualities</CardTitle>
                   <CardDescription>By total order value.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {stats.topQualities.map((q, i) => (
-                    <div key={i} className="flex justify-between items-center text-sm border-b border-white/5 pb-2 last:border-0">
+                    <div key={i} className="flex justify-between items-center text-sm border-b border-slate-200 dark:border-white/10 pb-2 last:border-0">
                       <div className="flex flex-col">
-                        <span className="text-white font-medium">{q.name}</span>
+                        <span className="text-body font-medium">{q.name}</span>
                         <span className="text-[10px] text-slate-500">{q.quantity.toFixed(0)} m</span>
                       </div>
                       <span className="text-emerald-400">{formatCurrency(q.value)}</span>
@@ -137,7 +137,7 @@ export function DashboardPage() {
 
           {/* Section 3: Order Summary */}
           <div>
-            <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-body mb-3 flex items-center gap-2">
               Order Analysis
             </h3>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -145,7 +145,7 @@ export function DashboardPage() {
                 title="Total Orders"
                 count={stats.orders.total.count}
                 value={stats.orders.total.value}
-                color="text-white"
+                color="text-body"
               />
               <OrderSummaryCard
                 title="Completed"
@@ -205,7 +205,7 @@ export function DashboardPage() {
             </div>
 
             <div>
-              <Card className="bg-surface-100 border-white/5 h-full">
+              <Card className="bg-surface-100 border-slate-200 dark:border-white/10 h-full">
                 <CardHeader>
                   <CardTitle>Quick Insights</CardTitle>
                   <CardDescription>Key metrics at a glance.</CardDescription>

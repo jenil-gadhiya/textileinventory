@@ -26,7 +26,8 @@ export const generateInventoryPDF = async (req, res, next) => {
             .populate("qualityId", "fabricName")
             .populate("designId", "designNumber")
             .populate("factoryId", "factoryName")
-            .sort({ qualityId: 1, designId: 1 });
+            .populate("matchingId", "matchingName")
+            .sort({ factoryId: 1, qualityId: 1, designId: 1 });
 
         // Correction Logic & Processing
         const processedItems = items.map((item) => {
@@ -55,7 +56,7 @@ export const generateInventoryPDF = async (req, res, next) => {
                 takaStats.producedM += (item.totalMetersProduced || 0);
                 takaStats.producedC += (item.totalTakaProduced || 0);
                 takaStats.orderedM += (item.totalMetersOrdered || 0);
-                takaStats.orderedC += (item.totalTakaOrdered || 0); // Corrected
+                takaStats.orderedC += (item.totalTakaOrdered || 0);
                 takaStats.availableM += (item.availableMeters || 0);
                 takaStats.availableC += (item.availableTaka || 0);
             } else if (item.type === "Saree") {
@@ -65,6 +66,14 @@ export const generateInventoryPDF = async (req, res, next) => {
                 sareeStats.available += (item.availableSaree || 0);
             }
         });
+
+        // Group by Factory
+        const groupedItems = processedItems.reduce((acc, item) => {
+            const factoryName = item.factoryId?.factoryName || "Unknown Factory";
+            if (!acc[factoryName]) acc[factoryName] = [];
+            acc[factoryName].push(item);
+            return acc;
+        }, {});
 
         // Generate PDF
         const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' });
@@ -92,15 +101,12 @@ export const generateInventoryPDF = async (req, res, next) => {
         if (hasTaka || hasSaree) {
             doc.fontSize(10);
             if (hasTaka && !hasSaree) {
-                // Centered Taka Box
                 drawTotalsBox(doc, (doc.page.width - boxWidth) / 2, y, boxWidth, boxHeight, "Taka Totals", takaStats, "Taka");
                 y += boxHeight + 20;
             } else if (!hasTaka && hasSaree) {
-                // Centered Saree Box
                 drawTotalsBox(doc, (doc.page.width - boxWidth) / 2, y, boxWidth, boxHeight, "Saree Totals", sareeStats, "Saree");
                 y += boxHeight + 20;
             } else {
-                // Both
                 const gap = 20;
                 const startX = (doc.page.width - (boxWidth * 2 + gap)) / 2;
                 drawTotalsBox(doc, startX, y, boxWidth, boxHeight, "Taka Totals", takaStats, "Taka");
@@ -112,64 +118,84 @@ export const generateInventoryPDF = async (req, res, next) => {
         // Table Constants
         const startX = 30;
         const colWidths = [180, 80, 100, 60, 100, 100, 100];
-        const headers = ["Quality", "Design", "Factory", "Type", "Produced", "Ordered", "Available"];
+        const headers = ["Quality", "Design", "Matching", "Type", "Produced", "Ordered", "Available"];
 
-        // Ensure space for table header
-        if (y + 40 > doc.page.height - 30) {
-            doc.addPage({ layout: 'landscape', margin: 30 });
-            y = 50;
-        }
+        // Iterate groups
+        Object.entries(groupedItems).forEach(([factoryName, factoryItems]) => {
 
-        // Header Row
-        drawTableHeader(doc, headers, startX, y, colWidths);
-        y += 25;
-
-        // Data Rows
-        doc.font("Helvetica").fontSize(9);
-
-        processedItems.forEach((item, index) => {
-            if (y > 510) { // Page Break
+            // Check for space for Factory Header + Table Header (approx 60px)
+            if (y + 60 > doc.page.height - 30) {
                 doc.addPage({ layout: 'landscape', margin: 30 });
                 y = 50;
-                // Header on new page
-                drawTableHeader(doc, headers, startX, y, colWidths);
-                y += 25;
-                doc.font("Helvetica").fontSize(9);
             }
 
-            const quality = item.qualityId?.fabricName || "-";
-            const design = item.designId?.designNumber || "-";
-            const factory = item.factoryId?.factoryName || "-";
-            const typeVal = item.type;
+            // Factory Header
+            doc.font("Helvetica-Bold").fontSize(12).fillColor("#1e293b");
+            doc.text(`Factory: ${factoryName}`, startX, y);
+            y += 20;
+            doc.fillColor("#000000"); // Reset
 
-            const produced = item.type === "Taka"
-                ? `${item.totalMetersProduced.toFixed(2)}m`
-                : `${item.totalSareeProduced} pcs`;
+            // Table Header
+            drawTableHeader(doc, headers, startX, y, colWidths);
+            y += 25;
 
-            const ordered = item.type === "Taka"
-                ? `${item.totalMetersOrdered.toFixed(2)}m`
-                : `${item.totalSareeOrdered} pcs`;
+            // Data Rows
+            doc.font("Helvetica").fontSize(9);
 
-            const available = item.type === "Taka"
-                ? `${(item.availableMeters || 0).toFixed(2)}m`
-                : `${item.availableSaree || 0} pcs`;
+            factoryItems.forEach((item) => {
+                if (y > 510) { // Page Break
+                    doc.addPage({ layout: 'landscape', margin: 30 });
+                    y = 50;
 
-            // Row rendering
-            let x = startX;
-            const values = [quality, design, factory, typeVal, produced, ordered, available];
+                    // Re-draw Factory Header (Optional, but good for context)
+                    doc.font("Helvetica-Bold").fontSize(12).fillColor("#1e293b");
+                    doc.text(`Factory: ${factoryName} (Cont.)`, startX, y);
+                    y += 20;
+                    doc.fillColor("#000000");
 
-            values.forEach((v, i) => {
-                doc.text(v, x, y, { width: colWidths[i], align: "left" });
-                x += colWidths[i];
+                    // Header on new page
+                    drawTableHeader(doc, headers, startX, y, colWidths);
+                    y += 25;
+                    doc.font("Helvetica").fontSize(9);
+                }
+
+                const quality = item.qualityId?.fabricName || "-";
+                const design = item.designId?.designNumber || "-";
+                const matching = item.matchingId?.matchingName || "-";
+                const typeVal = item.type;
+
+                const produced = item.type === "Taka"
+                    ? `${item.totalMetersProduced.toFixed(2)}m`
+                    : `${item.totalSareeProduced} pcs`;
+
+                const ordered = item.type === "Taka"
+                    ? `${item.totalMetersOrdered.toFixed(2)}m`
+                    : `${item.totalSareeOrdered} pcs`;
+
+                const available = item.type === "Taka"
+                    ? `${(item.availableMeters || 0).toFixed(2)}m`
+                    : `${item.availableSaree || 0} pcs`;
+
+                // Row rendering
+                let x = startX;
+                const values = [quality, design, matching, typeVal, produced, ordered, available];
+
+                values.forEach((v, i) => {
+                    doc.text(v, x, y, { width: colWidths[i], align: "left" });
+                    x += colWidths[i];
+                });
+
+                // Line separator
+                doc.strokeColor("#eeeeee")
+                    .moveTo(startX, y + 15)
+                    .lineTo(startX + 750, y + 15)
+                    .stroke()
+                    .strokeColor("#000000"); // Reset
+
+                y += 20;
             });
 
-            // Line separator
-            doc.strokeColor("#eeeeee")
-                .moveTo(startX, y + 15)
-                .lineTo(startX + 750, y + 15)
-                .stroke()
-                .strokeColor("#000000"); // Reset
-
+            // Gap between factories
             y += 20;
         });
 

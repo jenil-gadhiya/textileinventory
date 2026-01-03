@@ -395,7 +395,7 @@ export function ChallanCreatePage() {
             // Get challan ID and open PDF
             const challanId = (createdChallan as any)?._id || (createdChallan as any)?.id;
             if (challanId) {
-                window.open(`http://localhost:5005/api/challans/${challanId}/pdf`, "_blank");
+                window.open(`/api/challans/${challanId}/pdf`, "_blank");
             }
 
             alert("Challan created successfully!");

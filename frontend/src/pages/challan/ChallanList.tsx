@@ -37,7 +37,7 @@ export function ChallanListPage() {
     };
 
     const handleDownloadPDF = (challanId: string) => {
-        window.open(`http://localhost:5005/api/challans/${challanId}/pdf`, "_blank");
+        window.open(`/api/challans/${challanId}/pdf`, "_blank");
     };
 
     const handleDelete = async (challanId: string) => {

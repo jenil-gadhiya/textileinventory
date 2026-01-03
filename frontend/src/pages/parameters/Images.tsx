@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-const assetBase = (import.meta.env.VITE_API_URL || "http://localhost:5005/api").replace(/\/api$/, "");
+const assetBase = import.meta.env.PROD ? "" : (import.meta.env.VITE_API_URL || "http://localhost:5005/api").replace(/\/api$/, "");
 import { Field } from "@/components/form/Field";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";

@@ -109,7 +109,7 @@ export function StockReportPage() {
         if (fromDate) query.append("fromDate", fromDate);
         if (toDate) query.append("toDate", toDate);
 
-        window.open(`http://localhost:5005/api/inventory/pdf?${query.toString()}`, "_blank");
+        window.open(`/api/inventory/pdf?${query.toString()}`, "_blank");
     };
 
     const hasTaka = inventory.some(i => i.type === "Taka");

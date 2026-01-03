@@ -345,13 +345,18 @@ export function StockReportPage() {
                                             </div>
                                             <div>
                                                 <div className="text-xs text-muted">Available</div>
-                                                <div className="text-green-500 font-semibold text-lg">
-                                                    {inventory
+                                                {(() => {
+                                                    const val = inventory
                                                         .filter(i => i.type === "Taka")
-                                                        .reduce((sum, i) => sum + i.availableMeters, 0)
-                                                        .toFixed(2)}m
-                                                </div>
-                                                <div className="text-xs text-green-400">
+                                                        .reduce((sum, i) => sum + i.availableMeters, 0);
+                                                    const isNeg = val < 0;
+                                                    return (
+                                                        <div className={`${isNeg ? "text-red-500" : "text-green-500"} font-semibold text-lg`}>
+                                                            {val.toFixed(2)}m
+                                                        </div>
+                                                    );
+                                                })()}
+                                                <div className="text-xs text-muted">
                                                     {Math.max(0, inventory
                                                         .filter(i => i.type === "Taka")
                                                         .reduce((sum, i) => sum + (i.availableTaka || 0), 0))} Taka
@@ -386,11 +391,17 @@ export function StockReportPage() {
                                             </div>
                                             <div>
                                                 <div className="text-xs text-muted">Available</div>
-                                                <div className="text-green-500 font-semibold text-lg">
-                                                    {inventory
+                                                {(() => {
+                                                    const val = inventory
                                                         .filter(i => i.type === "Saree")
-                                                        .reduce((sum, i) => sum + i.availableSaree, 0)} pcs
-                                                </div>
+                                                        .reduce((sum, i) => sum + i.availableSaree, 0);
+                                                    const isNeg = val < 0;
+                                                    return (
+                                                        <div className={`${isNeg ? "text-red-500" : "text-green-500"} font-semibold text-lg`}>
+                                                            {val} pcs
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                     </div>

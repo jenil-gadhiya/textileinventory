@@ -12,7 +12,7 @@ export const getOrders = async (req, res, next) => {
             .populate("partyId", "partyName")
             .populate("factoryId", "factoryName")
             .populate("brokerId", "brokerName")
-            .populate("salesmanId", "brokerName")
+            .populate("salesmanId", "salesmanName")
             .populate("lineItems.qualityId", "fabricName")
             .populate("lineItems.designId", "designNumber designName")
             .populate("lineItems.matchingQuantities.matchingId", "matchingName")

@@ -184,6 +184,7 @@ export interface Order {
   orderNo: string;
   date: string;
   partyId: string | Party;
+  factoryId?: string | Factory;
   brokerId?: string | Broker;
   salesmanId?: string | Salesman;
   paymentTerms?: string;

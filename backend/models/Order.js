@@ -55,6 +55,7 @@ const orderSchema = new mongoose.Schema(
         orderNo: { type: String, unique: true },
         date: { type: String, required: true },
         partyId: { type: mongoose.Schema.Types.ObjectId, ref: "Party" },
+        factoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Factory" },
         brokerId: { type: mongoose.Schema.Types.ObjectId, ref: "Broker" },
         salesmanId: { type: mongoose.Schema.Types.ObjectId, ref: "Salesman" },
         paymentTerms: { type: String },

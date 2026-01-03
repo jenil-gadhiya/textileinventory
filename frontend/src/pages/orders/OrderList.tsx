@@ -61,6 +61,11 @@ export function OrderListPage() {
         // Format order details for WhatsApp
         const party = order.partyId && typeof order.partyId === "object" ? order.partyId.partyName : "";
 
+        // Use factory if available, otherwise fallback to party
+        const factory = order.factoryId && typeof order.factoryId === "object"
+            ? (order.factoryId as any).factoryName
+            : party;
+
         // Reduced padding for mobile screens (approx 30-35 chars width)
         const pad = (str: string, length: number = 10) => str.padEnd(length, " ");
 
@@ -74,7 +79,7 @@ export function OrderListPage() {
 
         message += "\n◆ LINE ITEMS\n\n";
 
-        message += `  *FACTORY ${party.toUpperCase()}*\n`;
+        message += `  *FACTORY ${factory.toUpperCase()}*\n`;
 
         let grandTotalSarees = 0;
 

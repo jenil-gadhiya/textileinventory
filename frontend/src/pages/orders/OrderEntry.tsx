@@ -12,7 +12,7 @@ import { OrderLineItem } from "@/types/stock";
 
 export function OrderEntryPage() {
     const navigate = useNavigate();
-    const { parties } = useStockStore();
+    const { parties, factories } = useStockStore();
     const [brokers, setBrokers] = useState<any[]>([]);
     const [salesmen, setSalesmen] = useState<any[]>([]);
 
@@ -20,6 +20,7 @@ export function OrderEntryPage() {
         return new Date().toISOString().split('T')[0];
     });
     const [partyId, setPartyId] = useState("");
+    const [factoryId, setFactoryId] = useState("");
     const [brokerId, setBrokerId] = useState("");
     const [salesmanId, setSalesmanId] = useState("");
     const [paymentTerms, setPaymentTerms] = useState("");
@@ -97,6 +98,10 @@ export function OrderEntryPage() {
                 lineItems,
                 totalAmount: calculateTotalAmount()
             };
+
+            if (factoryId) {
+                payload.factoryId = factoryId;
+            }
 
             // Only include brokerId if a broker is actually selected and is a valid ObjectId
             // MongoDB ObjectId is 24 hex characters
@@ -207,7 +212,24 @@ export function OrderEntryPage() {
                                 </select>
                             </div>
 
-                            <div className="sm:col-span-2">
+                            <div>
+                                <Label htmlFor="factory">Factory</Label>
+                                <select
+                                    id="factory"
+                                    value={factoryId}
+                                    onChange={(e) => setFactoryId(e.target.value)}
+                                    className="flex h-11 w-full rounded-md border border-slate-200 dark:border-white/10 bg-surface-200 px-3 py-2 text-sm text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
+                                >
+                                    <option value="">Select Factory (Optional)</option>
+                                    {factories.map((f) => (
+                                        <option key={f.id} value={f.id}>
+                                            {f.factoryName}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
                                 <Label htmlFor="broker">Broker</Label>
                                 <select
                                     id="broker"

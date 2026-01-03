@@ -10,6 +10,7 @@ export const getOrders = async (req, res, next) => {
     try {
         const orders = await Order.find()
             .populate("partyId", "partyName")
+            .populate("factoryId", "factoryName")
             .populate("brokerId", "brokerName")
             .populate("salesmanId", "brokerName")
             .populate("lineItems.qualityId", "fabricName")
@@ -26,6 +27,7 @@ export const getOrder = async (req, res, next) => {
     try {
         const order = await Order.findById(req.params.id)
             .populate("partyId")
+            .populate("factoryId")
             .populate("brokerId")
             .populate("salesmanId")
             .populate("lineItems.qualityId")
@@ -51,6 +53,7 @@ export const createOrder = async (req, res, next) => {
         // Return populated order
         const populated = await Order.findById(order._id)
             .populate("partyId")
+            .populate("factoryId")
             .populate("brokerId")
             .populate("salesmanId")
             .populate("lineItems.qualityId")
@@ -71,6 +74,7 @@ export const updateOrder = async (req, res, next) => {
             { new: true, runValidators: true }
         )
             .populate("partyId")
+            .populate("factoryId")
             .populate("brokerId")
             .populate("salesmanId")
             .populate("lineItems.qualityId")

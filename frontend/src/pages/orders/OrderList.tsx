@@ -233,26 +233,11 @@ export function OrderListPage() {
                     <Button
                         size="sm"
                         variant="secondary"
-                        onClick={(e) => handleEdit(order.id, e)}
-                    >
-                        Edit
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="secondary"
                         onClick={(e) => handleWhatsAppShare(order, e)}
                         className="text-green-400 hover:text-green-300"
                         title="Share to WhatsApp"
                     >
                         📱 Share
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={(e) => handleDelete(order.id, e)}
-                        className="text-red-400 hover:text-red-300"
-                    >
-                        Delete
                     </Button>
                 </div>
             )
@@ -672,12 +657,11 @@ export function OrderListPage() {
                         <DataTable
                             data={tableData}
                             columns={[
-                                { key: "orderNo", header: "Order No" },
                                 { key: "date", header: "Date" },
+                                { key: "orderNo", header: "Order No" },
                                 { key: "party", header: "Party" },
                                 { key: "salesman", header: "Salesman" },
                                 { key: "status", header: "Status" },
-                                { key: "totalAmount", header: "Total Amount" },
                                 { key: "actions", header: "Actions", render: (row: any) => row.actions }
                             ]}
                             emptyMessage="No orders match the selected filters."
@@ -694,6 +678,30 @@ export function OrderListPage() {
                         <DialogTitle>Order Details</DialogTitle>
                     </DialogHeader>
                     {renderDetailContent()}
+
+                    {/* Modal Actions */}
+                    {selectedOrder && (
+                        <div className="flex justify-end gap-3 pt-4 border-t mt-4">
+                            <Button
+                                variant="secondary"
+                                onClick={(e) => {
+                                    handleEdit(selectedOrder.id, e);
+                                    setIsDetailModalOpen(false); // Close modal on edit? usually yes
+                                }}
+                            >
+                                Edit Order
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={(e) => {
+                                    handleDelete(selectedOrder.id, e);
+                                    setIsDetailModalOpen(false);
+                                }}
+                            >
+                                Delete Order
+                            </Button>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>

@@ -59,9 +59,15 @@ export function CatalogFormPage() {
   // Determine if selected quality is "Grey" (case insensitive check on name/type)
   const selectedQuality = qualities.find(q => q.id === qualityId);
   const isGrey = selectedQuality ? (
-    (selectedQuality.fabricType && (selectedQuality.fabricType.toLowerCase().includes("grey") || selectedQuality.fabricType.toLowerCase().includes("gray"))) ||
-    (selectedQuality.fabricName && (selectedQuality.fabricName.toLowerCase().includes("grey") || selectedQuality.fabricName.toLowerCase().includes("gray")))
+    (!!selectedQuality.fabricName && /gr[ae]y/i.test(selectedQuality.fabricName)) ||
+    (!!selectedQuality.fabricType && /gr[ae]y/i.test(selectedQuality.fabricType)) ||
+    (!!selectedQuality.loomType && /gr[ae]y/i.test(selectedQuality.loomType))
   ) : false;
+
+  // Debugging
+  useEffect(() => {
+    console.log("Detection Debug:", { qualityId, selectedQuality, isGrey });
+  }, [qualityId, selectedQuality, isGrey]);
 
   // Load catalog data for edit mode
   useEffect(() => {
@@ -290,6 +296,15 @@ export function CatalogFormPage() {
           <CardHeader>
             <div>
               <CardTitle>Catalog Details</CardTitle>
+              {/* DEBUG INFO - REMOVE AFTER FIX */}
+              <div className="bg-red-900/50 p-2 m-2 text-xs font-mono mb-4 text-white rounded">
+                DEBUG:
+                isSaree: {JSON.stringify(isSaree)} |
+                isGrey: {JSON.stringify(isGrey)} |
+                QID: {JSON.stringify(qualityId)} |
+                Name: {selectedQuality?.fabricName} |
+                Type: {selectedQuality?.fabricType}
+              </div>
               <div className="p-4">
                 {isEditMode
                   ? isSaree

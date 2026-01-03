@@ -59,9 +59,8 @@ export function CatalogFormPage() {
   // Determine if selected quality is "Grey" (case insensitive check on name/type)
   const selectedQuality = qualities.find(q => q.id === qualityId);
   const isGrey = selectedQuality ? (
-    (selectedQuality.fabricName && selectedQuality.fabricName.toLowerCase().includes("grey")) ||
-    (selectedQuality.fabricType && selectedQuality.fabricType.toLowerCase().includes("grey")) ||
-    (selectedQuality.loomType && selectedQuality.loomType.toLowerCase().includes("grey"))
+    (selectedQuality.fabricType && (selectedQuality.fabricType.toLowerCase().includes("grey") || selectedQuality.fabricType.toLowerCase().includes("gray"))) ||
+    (selectedQuality.fabricName && (selectedQuality.fabricName.toLowerCase().includes("grey") || selectedQuality.fabricName.toLowerCase().includes("gray")))
   ) : false;
 
   // Load catalog data for edit mode

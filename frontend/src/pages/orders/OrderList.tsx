@@ -76,8 +76,10 @@ export function OrderListPage() {
         if (salesman) message += `${pad("Salesman")} : ${salesman}\n`;
         message += "```\n";
 
-        message += `📦 *LINE ITEMS*\n`;
+        message += `🏭 *FACTORY : ${party.toUpperCase()}*\n`;
         message += "```\n";
+
+        let grandTotalSarees = 0;
 
         order.lineItems.forEach((item, index) => {
             const quality = item.qualityId && typeof item.qualityId === "object" ? item.qualityId.fabricName : "";
@@ -89,9 +91,10 @@ export function OrderListPage() {
             if (item.quantityType === "Taka" || item.quantityType === "Meter") {
                 const qtyUnit = item.quantityType === "Meter" ? "m" : "Taka";
                 message += `  ${pad("Qty")} : ${item.quantity} ${qtyUnit}\n`;
-                message += `  ${pad("Rate")} : ₹${item.rate}/${item.quantityType === "Meter" ? "m" : "Taka"}\n`;
             } else if (item.quantityType === "Saree") {
                 const totalPcs = item.matchingQuantities?.reduce((sum, mq) => sum + (mq.quantity || 0), 0) || 0;
+                grandTotalSarees += totalPcs;
+
                 message += `  ${pad("Total")} : ${totalPcs} Sarees\n`;
 
                 item.matchingQuantities?.forEach(mq => {
@@ -99,12 +102,14 @@ export function OrderListPage() {
                     // Tighter indentation for mobile
                     message += `    - ${pad(matching.substring(0, 10), 10)} : ${mq.quantity}\n`;
                 });
-
-                message += `  ${pad("Rate")} : ₹${item.rate}/pc\n`;
             }
             message += "\n";
         });
         message += "```";
+
+        if (grandTotalSarees > 0) {
+            message += `\n📊 *Total* : ${grandTotalSarees} Sarees\n`;
+        }
 
         if (order.remarks) {
             message += `\n📝 *Remarks*: ${order.remarks}`;

@@ -1,0 +1,19 @@
+import express from "express";
+import {
+    getInventory,
+    getInventoryById,
+    validateOrderStock,
+} from "../controllers/inventoryController.js";
+
+const router = express.Router();
+
+// Get all inventory with optional filters
+router.get("/", getInventory);
+
+// Get specific inventory item
+router.get("/:id", getInventoryById);
+
+// Validate stock for order
+router.post("/validate", validateOrderStock);
+
+export default router;

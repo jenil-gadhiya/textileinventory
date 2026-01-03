@@ -66,11 +66,12 @@ export function OrderListPage() {
         // Reduced padding for mobile screens (approx 30-35 chars width)
         const pad = (str: string, length: number = 10) => str.padEnd(length, " ");
 
-        let message = `📋 *ORDER DETAILS*\n`;
+        let message = `🕉️ *ORDER DETAILS*\n`;
+        message += "--------------------------------\n"; // Underline separator
         message += "```\n";
-        message += `${pad("Order No")} : ${order.orderNo}\n`;
+        message += `${pad("Order No")} : *${order.orderNo}*\n`;
         message += `${pad("Date")} : ${new Date(order.date).toLocaleDateString()}\n`;
-        if (party) message += `${pad("Party")} : ${party}\n`;
+        if (party) message += `${pad("Party")} : *${party.toUpperCase()}*\n`; // "Large and Dark" -> Bold Uppercase
         if (broker) message += `${pad("Broker")} : ${broker}\n`;
         if (salesman) message += `${pad("Salesman")} : ${salesman}\n`;
         message += "```\n";
@@ -103,8 +104,11 @@ export function OrderListPage() {
             }
             message += "\n";
         });
-
         message += "```";
+
+        if (order.remarks) {
+            message += `\n📝 *Remarks*: ${order.remarks}`;
+        }
 
         const encodedMessage = encodeURIComponent(message);
         const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;

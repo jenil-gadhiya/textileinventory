@@ -60,24 +60,20 @@ export function OrderListPage() {
 
         // Format order details for WhatsApp
         const party = order.partyId && typeof order.partyId === "object" ? order.partyId.partyName : "";
-        const broker = order.brokerId && typeof order.brokerId === "object" ? order.brokerId.brokerName : "";
-        const salesman = order.salesmanId && typeof order.salesmanId === "object" ? (order.salesmanId as any).salesmanName : "";
 
         // Reduced padding for mobile screens (approx 30-35 chars width)
         const pad = (str: string, length: number = 10) => str.padEnd(length, " ");
 
-        let message = `🕉️ *ORDER DETAILS*\n`;
-        message += "--------------------------------\n"; // Underline separator
-        message += "```\n";
+        let message = ` *ORDER DETAILS*\n`;
+        message += "--------------------------------\n";
+
         message += `${pad("Order No")} : *${order.orderNo}*\n`;
         message += `${pad("Date")} : ${new Date(order.date).toLocaleDateString()}\n`;
-        if (party) message += `${pad("Party")} : *${party.toUpperCase()}*\n`; // "Large and Dark" -> Bold Uppercase
-        if (broker) message += `${pad("Broker")} : ${broker}\n`;
-        if (salesman) message += `${pad("Salesman")} : ${salesman}\n`;
-        message += "```\n";
+        if (party) message += `${pad("Party")} : *${party.toUpperCase()}*\n`;
 
-        message += `🏭 *FACTORY : ${party.toUpperCase()}*\n`;
-        message += "```\n";
+        message += "\n *LINE ITEMS*\n\n";
+
+        message += `  *FACTORY ${party.toUpperCase()}*\n`;
 
         let grandTotalSarees = 0;
 
@@ -90,29 +86,32 @@ export function OrderListPage() {
 
             if (item.quantityType === "Taka" || item.quantityType === "Meter") {
                 const qtyUnit = item.quantityType === "Meter" ? "m" : "Taka";
-                message += `  ${pad("Qty")} : ${item.quantity} ${qtyUnit}\n`;
+                message += `   ${pad("Qty")} : ${item.quantity} ${qtyUnit}\n`;
             } else if (item.quantityType === "Saree") {
-                const totalPcs = item.matchingQuantities?.reduce((sum, mq) => sum + (mq.quantity || 0), 0) || 0;
-                grandTotalSarees += totalPcs;
-
-                message += `  ${pad("Total")} : ${totalPcs} Sarees\n`;
+                const itemTotalSarees = item.matchingQuantities?.reduce((sum, mq) => sum + (mq.quantity || 0), 0) || 0;
+                grandTotalSarees += itemTotalSarees;
 
                 item.matchingQuantities?.forEach(mq => {
                     const matching = mq.matchingId && typeof mq.matchingId === "object" ? mq.matchingId.matchingName : "Unknown";
-                    // Tighter indentation for mobile
-                    message += `    - ${pad(matching.substring(0, 10), 10)} : ${mq.quantity}\n`;
+                    message += `   - ${pad(matching.substring(0, 10), 10)} : ${mq.quantity}\n`;
                 });
+
+                // Total for this particular line item
+                message += "   -----------------------------\n";
+                message += `   - Total      : ${itemTotalSarees} Sarees\n`;
             }
             message += "\n";
         });
-        message += "```";
 
+        // Grand Total Section
+        message += "--------------------------------\n";
         if (grandTotalSarees > 0) {
-            message += `\n📊 *Total* : ${grandTotalSarees} Sarees\n`;
+            message += `GRAND TOTAL    : ${grandTotalSarees} SAREES\n`;
         }
+        message += "\n";
 
         if (order.remarks) {
-            message += `\n📝 *Remarks*: ${order.remarks}`;
+            message += ` Remarks: ${order.remarks}`;
         }
 
         const encodedMessage = encodeURIComponent(message);

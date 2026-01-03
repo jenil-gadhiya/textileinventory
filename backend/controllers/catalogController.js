@@ -68,38 +68,18 @@ export const createCatalog = asyncHandler(async (req, res) => {
   // 2. Find existing
   const existingDocs = await Catalog.find({ $or: conditions });
 
-  // 3. Filter candidates
-  const finalEntries = candidates.filter(cand => {
-    return !existingDocs.some(ext => {
-      const sameStock = ext.stockType === cand.stockType;
-      const sameQuality = String(ext.qualityId) === String(cand.qualityId);
-      const sameDesign = String(ext.designId) === String(cand.designId);
-
-      const extMatch = ext.matchingId ? String(ext.matchingId) : "null";
-      const candMatch = cand.matchingId ? String(cand.matchingId) : "null";
-      const sameMatching = extMatch === candMatch;
-
-      const extCut = ext.cut || 0;
-      const candCut = cand.cut || 0;
-      // Use tolerance for float comparison or just check strict equality if guaranteed to be saved same
-      // Mongoose stores numbers, strict equality usually fine for values entered via UI
-      const sameCut = Math.abs(extCut - candCut) < 0.001;
-
-      return sameStock && sameQuality && sameDesign && sameMatching && sameCut;
-    });
-  });
-
-  if (finalEntries.length > 0) {
-    const created = await Catalog.insertMany(finalEntries);
-    const populated = await Catalog.find({ _id: { $in: created.map((c) => c._id) } })
-      .populate("qualityId", "fabricName loomType fabricType")
-      .populate("designId", "designNumber designName")
-      .populate("matchingId", "matchingName");
-    return res.status(201).json(populated);
-  } else {
-    // No new entries created (all were duplicates)
-    return res.status(200).json([]);
+  // 3. Check for duplicates (STRICT)
+  if (existingDocs.length > 0) {
+    return res.status(409).json({ message: "Catalog entry already exists" });
   }
+
+  // 4. Create entries (all new)
+  const created = await Catalog.insertMany(candidates);
+  const populated = await Catalog.find({ _id: { $in: created.map((c) => c._id) } })
+    .populate("qualityId", "fabricName loomType fabricType")
+    .populate("designId", "designNumber designName")
+    .populate("matchingId", "matchingName");
+  return res.status(201).json(populated);
 });
 
 export const listCatalog = asyncHandler(async (req, res) => {

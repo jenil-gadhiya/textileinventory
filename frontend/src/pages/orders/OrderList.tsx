@@ -121,7 +121,7 @@ export function OrderListPage() {
         new Map(
             orders.flatMap(o => o.lineItems)
                 .filter(item => item.qualityId && typeof item.qualityId === "object")
-                .map(item => [item.qualityId.id, item.qualityId])
+                .map(item => [(item.qualityId as any).id, item.qualityId])
         ).values()
     );
 
@@ -129,7 +129,7 @@ export function OrderListPage() {
         new Map(
             orders
                 .filter(o => o.partyId && typeof o.partyId === "object")
-                .map(o => [o.partyId.id, o.partyId])
+                .map(o => [(o.partyId as any).id, o.partyId])
         ).values()
     );
 
@@ -553,8 +553,8 @@ export function OrderListPage() {
                                         size={4}
                                     >
                                         {allQualities.map((quality) => (
-                                            <option key={quality.id} value={quality.id}>
-                                                {quality.fabricName}
+                                            <option key={(quality as any).id} value={(quality as any).id}>
+                                                {(quality as any).fabricName}
                                             </option>
                                         ))}
                                     </select>

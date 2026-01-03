@@ -326,7 +326,7 @@ export function ProductionEntryPage() {
                                 id="factory"
                                 value={factoryId}
                                 onChange={(e) => setFactoryId(e.target.value)}
-                                className="flex h-11 w-full rounded-md border border-white/10 bg-surface-200 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
+                                className="flex h-11 w-full rounded-md border border-slate-200 dark:border-white/10 bg-surface-200 px-3 py-2 text-sm text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
                                 required
                             >
                                 <option value="">Select Factory</option>
@@ -370,7 +370,7 @@ export function ProductionEntryPage() {
                                         id="takaQuality"
                                         value={takaQualityId}
                                         onChange={(e) => setTakaQualityId(e.target.value)}
-                                        className="flex h-11 w-full rounded-md border border-white/10 bg-surface-200 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
+                                        className="flex h-11 w-full rounded-md border border-slate-200 dark:border-white/10 bg-surface-200 px-3 py-2 text-sm text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
                                         required
                                     >
                                         <option value="">Select Quality</option>
@@ -390,7 +390,7 @@ export function ProductionEntryPage() {
                                             id="takaDesign"
                                             value={takaDesignId}
                                             onChange={(e) => setTakaDesignId(e.target.value)}
-                                            className="flex h-11 w-full rounded-md border border-white/10 bg-surface-200 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
+                                            className="flex h-11 w-full rounded-md border border-slate-200 dark:border-white/10 bg-surface-200 px-3 py-2 text-sm text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
                                             required
                                         >
                                             <option value="">Select Design</option>
@@ -403,7 +403,7 @@ export function ProductionEntryPage() {
                                     </div>
                                 )}
 
-                                <div className="border border-white/10 rounded-lg p-4 space-y-4">
+                                <div className="border border-slate-200 dark:border-white/10 rounded-lg p-4 space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h3 className="font-semibold">Taka Details</h3>
                                         <Button
@@ -497,7 +497,7 @@ export function ProductionEntryPage() {
                                         id="quality"
                                         value={qualityId}
                                         onChange={(e) => setQualityId(e.target.value)}
-                                        className="flex h-11 w-full rounded-md border border-white/10 bg-surface-200 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
+                                        className="flex h-11 w-full rounded-md border border-slate-200 dark:border-white/10 bg-surface-200 px-3 py-2 text-sm text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
                                         required
                                     >
                                         <option value="">Select Quality</option>
@@ -517,7 +517,7 @@ export function ProductionEntryPage() {
                                                 id="design"
                                                 value={designId}
                                                 onChange={(e) => setDesignId(e.target.value)}
-                                                className="flex h-11 w-full rounded-md border border-white/10 bg-surface-200 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
+                                                className="flex h-11 w-full rounded-md border border-slate-200 dark:border-white/10 bg-surface-200 px-3 py-2 text-sm text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
                                                 required
                                             >
                                                 <option value="">Select Design</option>

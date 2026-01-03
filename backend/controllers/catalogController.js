@@ -5,21 +5,39 @@ export const createCatalog = asyncHandler(async (req, res) => {
   const { stockType, qualityId, designId, matchingIds, designIds, cut } = req.body;
 
   if (stockType === "Saree") {
-    // Create one entry per selected matching
-    if (!matchingIds || !Array.isArray(matchingIds) || matchingIds.length === 0) {
-      return res.status(400).json({ message: "At least one matching is required for Saree" });
-    }
     if (!cut || cut <= 0) {
       return res.status(400).json({ message: "Cut is required for Saree" });
     }
 
-    const entries = matchingIds.map((matchingId) => ({
-      stockType,
-      qualityId,
-      designId,
-      matchingId,
-      cut
-    }));
+    let entries = [];
+
+    // Case 1: Multiple Designs (e.g. Grey Saree - behaves like Taka for selection)
+    if (designIds && Array.isArray(designIds) && designIds.length > 0) {
+      entries = designIds.map((dId) => ({
+        stockType,
+        qualityId,
+        designId: dId,
+        matchingId: null,
+        cut
+      }));
+    }
+    // Case 2: Standard Saree (Single Design, Multiple Matchings)
+    else {
+      if (!designId) {
+        return res.status(400).json({ message: "Design is required for standard Saree" });
+      }
+      if (!matchingIds || !Array.isArray(matchingIds) || matchingIds.length === 0) {
+        return res.status(400).json({ message: "At least one matching is required for Saree" });
+      }
+
+      entries = matchingIds.map((mId) => ({
+        stockType,
+        qualityId,
+        designId,
+        matchingId: mId,
+        cut
+      }));
+    }
 
     const created = await Catalog.insertMany(entries);
     const populated = await Catalog.find({ _id: { $in: created.map((c) => c._id) } })

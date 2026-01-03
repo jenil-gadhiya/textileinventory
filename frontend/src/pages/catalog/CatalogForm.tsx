@@ -53,7 +53,16 @@ export function CatalogFormPage() {
 
 
   const stockType = watch("stockType");
+  const qualityId = watch("qualityId");
   const isSaree = stockType === "Saree";
+
+  // Determine if selected quality is "Grey" (case insensitive check on name/type)
+  const selectedQuality = qualities.find(q => q.id === qualityId);
+  const isGrey = selectedQuality ? (
+    (selectedQuality.fabricName && selectedQuality.fabricName.toLowerCase().includes("grey")) ||
+    (selectedQuality.fabricType && selectedQuality.fabricType.toLowerCase().includes("grey")) ||
+    (selectedQuality.loomType && selectedQuality.loomType.toLowerCase().includes("grey"))
+  ) : false;
 
   // Load catalog data for edit mode
   useEffect(() => {
@@ -104,16 +113,18 @@ export function CatalogFormPage() {
   );
 
   useEffect(() => {
-    // Reset selections when switching stock type
-    if (isSaree) {
+    // Reset selections when switching stock type or quality (if grey status changes)
+    if (isSaree && !isGrey) {
       setSelectedDesigns([]);
       setValue("designId", "");
     } else {
+      // Taka or Grey Saree -> Clear matchings
       setSelectedMatchings([]);
       setValue("matchingIds", []);
-      setValue("cut", undefined);
+      // If Taka, clear cut. If Grey Saree, keep cut.
+      if (!isSaree) setValue("cut", undefined);
     }
-  }, [isSaree, setValue]);
+  }, [isSaree, isGrey, setValue]);
 
   const toggleMatching = (matchingId: string) => {
     const newSelection = selectedMatchings.includes(matchingId)
@@ -134,15 +145,30 @@ export function CatalogFormPage() {
     setIsSubmitting(true);
     try {
       if (isSaree) {
-        if (selectedMatchings.length === 0) {
-          alert("Please select at least one matching for Saree");
-          setIsSubmitting(false);
-          return;
-        }
-        if (!values.cut || values.cut <= 0) {
-          alert("Please enter a valid cut value for Saree");
-          setIsSubmitting(false);
-          return;
+        if (isGrey) {
+          // Grey Saree: Multiple Designs, Cut, No Matching
+          if (selectedDesigns.length === 0) {
+            alert("Please select at least one design for Grey Saree");
+            setIsSubmitting(false);
+            return;
+          }
+          if (!values.cut || values.cut <= 0) {
+            alert("Please enter a valid cut value");
+            setIsSubmitting(false);
+            return;
+          }
+        } else {
+          // Standard Saree: Single Design, Multiple Matchings, Cut
+          if (selectedMatchings.length === 0) {
+            alert("Please select at least one matching for Saree");
+            setIsSubmitting(false);
+            return;
+          }
+          if (!values.cut || values.cut <= 0) {
+            alert("Please enter a valid cut value for Saree");
+            setIsSubmitting(false);
+            return;
+          }
         }
       } else {
         // Taka mode
@@ -180,31 +206,43 @@ export function CatalogFormPage() {
           stockType: values.stockType,
           qualityId: values.qualityId,
           designId: values.designId || "",
-          matchingId: isSaree && selectedMatchings.length > 0 ? selectedMatchings[0] : null,
+          matchingId: (isSaree && !isGrey && selectedMatchings.length > 0) ? selectedMatchings[0] : null,
           cut: isSaree ? values.cut : null
         });
       } else {
         // Create new catalog entries
         if (isSaree) {
-          // Saree: same quality + same design + multiple matchings
-          if (!values.designId) {
-            alert("Please select a design for Saree");
-            setIsSubmitting(false);
-            return;
+          if (isGrey) {
+            // Create Grey Saree (Multiple Designs)
+            await createCatalog({
+              stockType: "Saree",
+              qualityId: values.qualityId,
+              designId: "", // ignored
+              designIds: selectedDesigns, // New field we added support for
+              cut: values.cut,
+              matchingIds: [] // No matchings
+            });
+          } else {
+            // Standard Saree
+            if (!values.designId) {
+              alert("Please select a design for Saree");
+              setIsSubmitting(false);
+              return;
+            }
+            await createCatalog({
+              stockType: values.stockType,
+              qualityId: values.qualityId,
+              designId: values.designId,
+              matchingIds: selectedMatchings,
+              cut: values.cut
+            });
           }
-          await createCatalog({
-            stockType: values.stockType,
-            qualityId: values.qualityId,
-            designId: values.designId,
-            matchingIds: selectedMatchings,
-            cut: values.cut
-          });
         } else {
           // Taka: same quality + multiple designs
           await createCatalog({
             stockType: values.stockType,
             qualityId: values.qualityId,
-            designId: "", // Will be ignored on backend for Taka
+            designId: "",
             designIds: selectedDesigns,
             cut: undefined
           });
@@ -259,7 +297,7 @@ export function CatalogFormPage() {
                     ? "Update quality, design, matching, and cut value."
                     : "Update quality and design for Taka stock."
                   : isSaree
-                    ? "Select quality, design, matchings, and enter cut value."
+                    ? isGrey ? "Select quality, cut, and multiple designs (Grey)." : "Select quality, design, matchings, and enter cut value."
                     : "Select quality and design for Taka stock."}
               </div>
             </div>
@@ -285,7 +323,7 @@ export function CatalogFormPage() {
               </Field>
 
               {/* Design selection - dropdown for Saree (edit mode) or single select in edit, checkbox for Taka (create mode) */}
-              {(isEditMode || isSaree) && (
+              {(isEditMode || (isSaree && !isGrey)) && (
                 <Field label="Design Number" required error={errors.designId?.message}>
                   <Select {...register("designId")} className="bg-surface-200 text-body dark:bg-slate-800">
                     <option value="">Select Design</option>
@@ -329,7 +367,7 @@ export function CatalogFormPage() {
             </div>
 
             <AnimatePresence>
-              {isSaree && (
+              {isSaree && !isGrey && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
@@ -403,9 +441,9 @@ export function CatalogFormPage() {
               )}
             </AnimatePresence>
 
-            {/* Design checkboxes for Taka mode (create only) */}
+            {/* Design checkboxes for Taka mode OR Grey Saree (create only) */}
             <AnimatePresence>
-              {!isSaree && !isEditMode && (
+              {(!isEditMode && (!isSaree || isGrey)) && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
@@ -413,10 +451,10 @@ export function CatalogFormPage() {
                   className="space-y-3"
                 >
                   <Field
-                    label="Design Numbers"
-                    required={!isSaree}
+                    label={isGrey ? "Design Numbers (Grey Saree)" : "Design Numbers"}
+                    required={!isSaree || isGrey}
                     error={
-                      !isSaree && selectedDesigns.length === 0
+                      (!isSaree || isGrey) && selectedDesigns.length === 0
                         ? "Select at least one design"
                         : undefined
                     }

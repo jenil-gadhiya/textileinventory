@@ -577,8 +577,8 @@ export function OrderListPage() {
                                         size={4}
                                     >
                                         {allParties.map((party) => (
-                                            <option key={party.id} value={party.id}>
-                                                {party.partyName}
+                                            <option key={(party as any).id} value={(party as any).id}>
+                                                {(party as any).partyName}
                                             </option>
                                         ))}
                                     </select>

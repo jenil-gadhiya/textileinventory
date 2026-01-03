@@ -93,7 +93,7 @@ export const generateInventoryPDF = async (req, res, next) => {
         doc.fontSize(10).text(dateText, { align: "center" });
         doc.moveDown();
 
-        // Totals Section
+        // Totals Section (Keep existing totals logic)
         let y = doc.y;
         const boxWidth = 350;
         const boxHeight = 60;
@@ -115,88 +115,132 @@ export const generateInventoryPDF = async (req, res, next) => {
             }
         }
 
-        // Table Constants
+        // Table Constants - Updated columns (Removed Quality, Removed Type)
         const startX = 30;
-        const colWidths = [180, 80, 100, 60, 100, 100, 100];
-        const headers = ["Quality", "Design", "Matching", "Type", "Produced", "Ordered", "Available"];
+        // Cols: Design (150), Matching (150), Produced (120), Ordered (120), Available (120)
+        const colWidths = [150, 150, 120, 120, 120];
+        const headers = ["Design", "Matching", "Produced", "Ordered", "Available"];
+        const tableWidth = colWidths.reduce((a, b) => a + b, 0);
 
-        // Iterate groups
-        Object.entries(groupedItems).forEach(([factoryName, factoryItems]) => {
+        // Group items by Factory -> Quality
+        // We really want to iterate: Factory A -> Quality 1 -> Items, Quality 2 -> Items...
+        const groupedByFactory = processedItems.reduce((acc, item) => {
+            const fName = item.factoryId?.factoryName || "Unknown Factory";
+            if (!acc[fName]) acc[fName] = {};
 
-            // Check for space for Factory Header + Table Header (approx 60px)
-            if (y + 60 > doc.page.height - 30) {
+            const qName = item.qualityId?.fabricName || "Unknown Quality";
+            if (!acc[fName][qName]) acc[fName][qName] = [];
+
+            acc[fName][qName].push(item);
+            return acc;
+        }, {});
+
+        // Iterate
+        Object.entries(groupedByFactory).forEach(([factoryName, qualities]) => {
+
+            // Factory Header
+            if (y + 40 > doc.page.height - 30) {
                 doc.addPage({ layout: 'landscape', margin: 30 });
                 y = 50;
             }
 
-            // Factory Header
-            doc.font("Helvetica-Bold").fontSize(12).fillColor("#1e293b");
-            doc.text(`Factory: ${factoryName}`, startX, y);
-            y += 20;
-            doc.fillColor("#000000"); // Reset
-
-            // Table Header
-            drawTableHeader(doc, headers, startX, y, colWidths);
+            doc.font("Helvetica-Bold").fontSize(14).fillColor("#1e293b");
+            doc.text(`FACTORY: ${factoryName.toUpperCase()}`, startX, y);
             y += 25;
 
-            // Data Rows
-            doc.font("Helvetica").fontSize(9);
+            // Iterate Qualities
+            Object.entries(qualities).forEach(([qualityName, items]) => {
 
-            factoryItems.forEach((item) => {
-                if (y > 510) { // Page Break
+                // Check page break for Quality Header + Table Header + 1 Row (approx 80px)
+                if (y + 80 > doc.page.height - 30) {
                     doc.addPage({ layout: 'landscape', margin: 30 });
                     y = 50;
-
-                    // Re-draw Factory Header (Optional, but good for context)
-                    doc.font("Helvetica-Bold").fontSize(12).fillColor("#1e293b");
-                    doc.text(`Factory: ${factoryName} (Cont.)`, startX, y);
+                    // Repeat Factory Header maybe?
+                    doc.font("Helvetica-Bold").fontSize(10).fillColor("#94a3b8");
+                    doc.text(`(Cont.) Factory: ${factoryName}`, startX, y);
                     y += 20;
-                    doc.fillColor("#000000");
-
-                    // Header on new page
-                    drawTableHeader(doc, headers, startX, y, colWidths);
-                    y += 25;
-                    doc.font("Helvetica").fontSize(9);
                 }
 
-                const quality = item.qualityId?.fabricName || "-";
-                const design = item.designId?.designNumber || "-";
-                const matching = item.matchingId?.matchingName || "-";
-                const typeVal = item.type;
+                // Quality Header (Underlined style as per request/image implication)
+                doc.font("Helvetica-Bold").fontSize(12).fillColor("#000000");
+                doc.text(qualityName, startX, y, { underline: true });
+                y += 20;
 
-                const produced = item.type === "Taka"
-                    ? `${item.totalMetersProduced.toFixed(2)}m`
-                    : `${item.totalSareeProduced} pcs`;
+                // Table Header
+                drawTableHeader(doc, headers, startX, y, colWidths);
+                y += 20;
 
-                const ordered = item.type === "Taka"
-                    ? `${item.totalMetersOrdered.toFixed(2)}m`
-                    : `${item.totalSareeOrdered} pcs`;
+                // Items
+                doc.font("Helvetica").fontSize(10);
 
-                const available = item.type === "Taka"
-                    ? `${(item.availableMeters || 0).toFixed(2)}m`
-                    : `${item.availableSaree || 0} pcs`;
+                // Track Quality Totals
+                let qTotalProduced = 0;
+                let qTotalOrdered = 0;
+                let qTotalAvailable = 0; // Note: Mixing units (meters/pcs) is tricky for total. 
+                // Usually totals are separated by unit. 
+                // For simplicity, we'll try to sum numbers but if mixed types exist, it might be weird.
+                // Assuming a Quality is usually one Type (either Saree or Taka).
 
-                // Row rendering
-                let x = startX;
-                const values = [quality, design, matching, typeVal, produced, ordered, available];
+                const isTakaQuality = items.some(i => i.type === "Taka");
+                const unit = isTakaQuality ? "m" : "pcs";
 
-                values.forEach((v, i) => {
-                    doc.text(v, x, y, { width: colWidths[i], align: "left" });
-                    x += colWidths[i];
+                items.forEach(item => {
+                    if (y > 520) {
+                        doc.addPage({ layout: 'landscape', margin: 30 });
+                        y = 50;
+                        drawTableHeader(doc, headers, startX, y, colWidths);
+                        y += 20;
+                        doc.font("Helvetica").fontSize(10);
+                    }
+
+                    const design = item.designId?.designNumber || "-";
+                    const matching = item.matchingId?.matchingName || "-";
+
+                    const prodVal = item.type === "Taka" ? item.totalMetersProduced : item.totalSareeProduced;
+                    const ordVal = item.type === "Taka" ? item.totalMetersOrdered : item.totalSareeOrdered;
+                    const availVal = item.type === "Taka" ? item.availableMeters : item.availableSaree;
+
+                    qTotalProduced += (prodVal || 0);
+                    qTotalOrdered += (ordVal || 0);
+                    qTotalAvailable += (availVal || 0);
+
+                    // Row
+                    let x = startX;
+
+                    doc.text(design, x, y, { width: colWidths[0] });
+                    x += colWidths[0];
+                    doc.text(matching, x, y, { width: colWidths[1] });
+                    x += colWidths[1];
+                    doc.text(`${prodVal?.toFixed(2) || 0} ${unit}`, x, y, { width: colWidths[2], align: 'right' });
+                    x += colWidths[2];
+                    doc.text(`${ordVal?.toFixed(2) || 0} ${unit}`, x, y, { width: colWidths[3], align: 'right' });
+                    x += colWidths[3];
+                    doc.text(`${availVal?.toFixed(2) || 0} ${unit}`, x, y, { width: colWidths[4], align: 'right' });
+
+                    y += 18;
                 });
 
-                // Line separator
-                doc.strokeColor("#eeeeee")
-                    .moveTo(startX, y + 15)
-                    .lineTo(startX + 750, y + 15)
-                    .stroke()
-                    .strokeColor("#000000"); // Reset
+                // Item Wise Total for Quality
+                doc.font("Helvetica-Bold").fontSize(10);
+                // Draw dotted line
+                doc.strokeColor("#000000").dash(1, { space: 2 }).moveTo(startX, y).lineTo(startX + tableWidth, y).stroke().undash();
+                y += 5;
 
-                y += 20;
+                let tx = startX;
+                doc.text("Item Wise Total", tx, y, { width: colWidths[0] + colWidths[1] });
+                tx += colWidths[0] + colWidths[1];
+
+                doc.text(`${qTotalProduced.toFixed(2)} ${unit}`, tx, y, { width: colWidths[2], align: 'right' });
+                tx += colWidths[2];
+                doc.text(`${qTotalOrdered.toFixed(2)} ${unit}`, tx, y, { width: colWidths[3], align: 'right' });
+                tx += colWidths[3];
+                doc.text(`${qTotalAvailable.toFixed(2)} ${unit}`, tx, y, { width: colWidths[4], align: 'right' });
+
+                y += 25; // Gap before next quality
             });
 
-            // Gap between factories
-            y += 20;
+            // Gap before next factory
+            y += 10;
         });
 
         doc.end();
@@ -251,8 +295,10 @@ function drawTableHeader(doc, headers, startX, y, colWidths) {
     doc.fontSize(10).font("Helvetica-Bold");
     let x = startX;
     headers.forEach((h, i) => {
-        doc.text(h, x, y, { width: colWidths[i], align: "left" });
+        // Produced, Ordered, Available are right aligned
+        const align = i >= 2 ? "right" : "left";
+        doc.text(h, x, y, { width: colWidths[i], align: align });
         x += colWidths[i];
     });
-    doc.moveTo(startX, y + 15).lineTo(startX + 750, y + 15).stroke();
+    doc.moveTo(startX, y + 15).lineTo(startX + colWidths.reduce((a, b) => a + b, 0), y + 15).stroke();
 }

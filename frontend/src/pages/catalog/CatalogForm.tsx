@@ -267,14 +267,14 @@ export function CatalogFormPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Stock Type" required error={errors.stockType?.message}>
-                <Select {...register("stockType")}>
+                <Select {...register("stockType")} className="bg-surface-200 text-body dark:bg-slate-800">
                   <option value="Saree">Saree</option>
                   <option value="Taka">Taka</option>
                 </Select>
               </Field>
 
               <Field label="Quality" required error={errors.qualityId?.message}>
-                <Select {...register("qualityId")}>
+                <Select {...register("qualityId")} className="bg-surface-200 text-body dark:bg-slate-800">
                   <option value="">Select Quality</option>
                   {qualities.map((q) => (
                     <option key={q.id} value={q.id}>
@@ -287,7 +287,7 @@ export function CatalogFormPage() {
               {/* Design selection - dropdown for Saree (edit mode) or single select in edit, checkbox for Taka (create mode) */}
               {(isEditMode || isSaree) && (
                 <Field label="Design Number" required error={errors.designId?.message}>
-                  <Select {...register("designId")}>
+                  <Select {...register("designId")} className="bg-surface-200 text-body dark:bg-slate-800">
                     <option value="">Select Design</option>
                     {designs.map((d) => (
                       <option key={d.id} value={d.id}>
@@ -316,6 +316,7 @@ export function CatalogFormPage() {
                         step="0.01"
                         min="0.01"
                         placeholder="Enter cut value"
+                        className="bg-surface-200 text-body dark:bg-slate-800"
                         {...register("cut", {
                           valueAsNumber: true,
                           required: isSaree
@@ -343,6 +344,7 @@ export function CatalogFormPage() {
                     >
                       <Select
                         value={selectedMatchings[0] || ""}
+                        className="bg-surface-200 text-body dark:bg-slate-800"
                         onChange={(e) => {
                           const value = e.target.value;
                           if (value) {

@@ -1,5 +1,5 @@
 // Inventory API functions
-const API_BASE = "http://localhost:5005/api";
+import { http } from "./http";
 
 export interface InventoryItem {
     id: string;
@@ -65,27 +65,16 @@ export async function fetchInventory(params?: {
     if (params?.design) queryParams.append("design", params.design);
     if (params?.type) queryParams.append("type", params.type);
 
-    const url = `${API_BASE}/inventory${queryParams.toString() ? `?${queryParams}` : ""}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("Failed to fetch inventory");
-    return response.json();
+    const url = `/inventory${queryParams.toString() ? `?${queryParams}` : ""}`;
+    const response = await http.get(url);
+    return response.data;
 }
 
 export async function validateOrderStock(lineItems: any[]): Promise<ValidationResult> {
-    const response = await fetch(`${API_BASE}/inventory/validate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lineItems }),
-    });
-
-    if (!response.ok) throw new Error("Failed to validate stock");
-    return response.json();
+    const response = await http.post(`/inventory/validate`, { lineItems });
+    return response.data;
 }
 
 export async function deleteInventory(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE}/inventory/${id}`, {
-        method: "DELETE",
-    });
-
-    if (!response.ok) throw new Error("Failed to delete inventory item");
+    await http.delete(`/inventory/${id}`);
 }

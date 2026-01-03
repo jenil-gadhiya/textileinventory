@@ -87,7 +87,9 @@ export function OrderListPage() {
 
             if (item.quantityType === "Taka" || item.quantityType === "Meter") {
                 const qtyUnit = item.quantityType === "Meter" ? "m" : "Taka";
-                message += `   ${pad("Qty")} : ${item.quantity} ${qtyUnit}\n`;
+                // Align Qty with matching lines: 3 spaces + "- " prefix = 5 chars indent relative to name
+                // To align colons, we use same pad(10)
+                message += `   - ${pad("Qty", 10)} : ${item.quantity} ${qtyUnit}\n`;
             } else if (item.quantityType === "Saree") {
                 const itemTotalSarees = item.matchingQuantities?.reduce((sum, mq) => sum + (mq.quantity || 0), 0) || 0;
                 grandTotalSarees += itemTotalSarees;
@@ -101,7 +103,8 @@ export function OrderListPage() {
 
                 // Total for this particular line item
                 message += "   -----------------------------\n";
-                message += `   - Total      : ${itemTotalSarees} Sarees\n`;
+                // Use pad function for Total to ensure exact alignment with matching names
+                message += `   - ${pad("Total", 10)} : ${itemTotalSarees} Sarees\n`;
             }
             message += "\n";
         });

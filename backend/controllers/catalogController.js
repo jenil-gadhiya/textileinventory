@@ -63,8 +63,6 @@ export const createCatalog = asyncHandler(async (req, res) => {
     qualityId
   });
 
-  console.log(`[DuplicateCheck] Checking ${candidates.length} candidates against ${existingDocs.length} existing entries.`);
-
   // Check strict duplication
   const hasDuplicate = candidates.some(cand => {
     return existingDocs.some(ext => {

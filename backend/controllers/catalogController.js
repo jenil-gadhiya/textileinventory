@@ -56,20 +56,32 @@ export const createCatalog = asyncHandler(async (req, res) => {
   }
 
   // Deduplication Logic
-  // 1. Build query conditions
-  const conditions = candidates.map(c => ({
-    stockType: c.stockType,
-    qualityId: c.qualityId,
-    designId: c.designId,
-    matchingId: c.matchingId || null,
-    cut: c.cut || null
-  }));
+  // Fetch potentially conflicting entries (same stock type and quality)
+  // This avoids issues with floating point exact matching in DB queries or null matchingIds
+  const existingDocs = await Catalog.find({
+    stockType,
+    qualityId
+  });
 
-  // 2. Find existing
-  const existingDocs = await Catalog.find({ $or: conditions });
+  // Check strict duplication
+  const hasDuplicate = candidates.some(cand => {
+    return existingDocs.some(ext => {
+      const sameDesign = String(ext.designId) === String(cand.designId);
 
-  // 3. Check for duplicates (STRICT)
-  if (existingDocs.length > 0) {
+      const extMatch = ext.matchingId ? String(ext.matchingId) : "null";
+      const candMatch = cand.matchingId ? String(cand.matchingId) : "null";
+      const sameMatching = extMatch === candMatch;
+
+      const extCut = ext.cut || 0;
+      const candCut = cand.cut || 0;
+      // Handle floating point equality for cut
+      const sameCut = Math.abs(extCut - candCut) < 0.01;
+
+      return sameDesign && sameMatching && sameCut;
+    });
+  });
+
+  if (hasDuplicate) {
     return res.status(409).json({ message: "Catalog entry already exists" });
   }
 

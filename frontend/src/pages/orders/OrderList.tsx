@@ -92,7 +92,7 @@ export function OrderListPage() {
                 const qtyUnit = item.quantityType === "Meter" ? "m" : "Taka";
                 // Align Qty with matching lines: 3 spaces + "- " prefix = 5 chars indent relative to name
                 // To align colons, we use same pad(10)
-                message += `   - ${pad("Qty", 10)} : ${padNum(item.quantity)} ${qtyUnit}\n`;
+                message += `   - ${pad("Qty", 10)} : ${padNum(item.quantity || 0)} ${qtyUnit}\n`;
             } else if (item.quantityType === "Saree") {
                 const itemTotalSarees = item.matchingQuantities?.reduce((sum, mq) => sum + (mq.quantity || 0), 0) || 0;
                 grandTotalSarees += itemTotalSarees;

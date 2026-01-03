@@ -78,6 +78,9 @@ export function OrderListPage() {
 
         let grandTotalSarees = 0;
 
+        // Helper for right-aligning numbers (4 chars)
+        const padNum = (num: number) => String(num).padStart(4, " ");
+
         order.lineItems.forEach((item, index) => {
             const quality = item.qualityId && typeof item.qualityId === "object" ? item.qualityId.fabricName : "";
             const design = item.designId && typeof item.designId === "object" ? item.designId.designNumber : "";
@@ -89,7 +92,7 @@ export function OrderListPage() {
                 const qtyUnit = item.quantityType === "Meter" ? "m" : "Taka";
                 // Align Qty with matching lines: 3 spaces + "- " prefix = 5 chars indent relative to name
                 // To align colons, we use same pad(10)
-                message += `   - ${pad("Qty", 10)} : ${item.quantity} ${qtyUnit}\n`;
+                message += `   - ${pad("Qty", 10)} : ${padNum(item.quantity)} ${qtyUnit}\n`;
             } else if (item.quantityType === "Saree") {
                 const itemTotalSarees = item.matchingQuantities?.reduce((sum, mq) => sum + (mq.quantity || 0), 0) || 0;
                 grandTotalSarees += itemTotalSarees;
@@ -98,13 +101,13 @@ export function OrderListPage() {
                     const matching = mq.matchingId && typeof mq.matchingId === "object" ? mq.matchingId.matchingName : "Unknown";
                     // Clean matching name (remove extra spaces if any)
                     const mName = matching.trim().substring(0, 10);
-                    message += `   - ${pad(mName, 10)} : ${mq.quantity}\n`;
+                    message += `   - ${pad(mName, 10)} : ${padNum(mq.quantity)}\n`;
                 });
 
                 // Total for this particular line item
                 message += "   -----------------------------\n";
                 // Use pad function for Total to ensure exact alignment with matching names
-                message += `   - ${pad("Total", 10)} : ${itemTotalSarees} Sarees\n`;
+                message += `   - ${pad("Total", 10)} : ${padNum(itemTotalSarees)} Sarees\n`;
             }
             message += "\n";
         });
@@ -112,7 +115,10 @@ export function OrderListPage() {
         // Grand Total Section
         message += "--------------------------------\n";
         if (grandTotalSarees > 0) {
-            message += `*GRAND TOTAL    : ${grandTotalSarees} SAREES*\n`;
+            // Align "GRAND TOTAL" with list items
+            // List: "   - " (5 chars) + Name(10) = 15 chars before colon
+            // Grand Total: "   " (3 chars) + Label(12) = 15 chars before colon
+            message += `   ${pad("*GRAND TOTAL*", 12)} : ${padNum(grandTotalSarees)} SAREES\n`;
         }
         message += "\n";
 

@@ -183,18 +183,37 @@ export const generateInventoryPDF = async (req, res, next) => {
 
                 const isTakaQuality = items.some(i => i.type === "Taka");
                 const unit = isTakaQuality ? "m" : "pcs";
+                let previousDesign = "";
 
-                items.forEach(item => {
+                items.forEach((item, index) => {
+                    // Check for page break
                     if (y > 520) {
                         doc.addPage({ layout: 'landscape', margin: 30 });
                         y = 50;
                         drawTableHeader(doc, headers, startX, y, colWidths);
                         y += 20;
                         doc.font("Helvetica").fontSize(10);
+                        // Reset on new page so we don't draw line at very top if not needed, 
+                        // actually if we split a design across pages, it's fine. 
+                        // But if a new design starts at top of page, meaningful.
+                        // However, simpler to just reset or handle normally.
+                        // Let's just handle it normally.
                     }
 
                     const design = item.designId?.designNumber || "-";
                     const matching = item.matchingId?.matchingName || "-";
+
+                    // Separator line if design changes
+                    if (index > 0 && design !== previousDesign) {
+                        doc.strokeColor("#e2e8f0") // Light gray
+                            .moveTo(startX, y - 2)
+                            .lineTo(startX + tableWidth, y - 2)
+                            .stroke()
+                            .strokeColor("#000000"); // Reset
+                        y += 5; // Add a bit of space
+                    }
+
+                    previousDesign = design;
 
                     const prodVal = item.type === "Taka" ? item.totalMetersProduced : item.totalSareeProduced;
                     const ordVal = item.type === "Taka" ? item.totalMetersOrdered : item.totalSareeOrdered;

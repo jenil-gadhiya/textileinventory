@@ -247,8 +247,8 @@ export const generateChallanPDF = async (req, res, next) => {
 
             const offSr = 0; const wSr = 30;
             const offTaka = 30; const wTaka = 70;
-            const offMeter = 100; const wMeter = 60;
-            const offDesign = 160; const wDesign = 90;
+            const offMeter = 100; const wMeter = 55;
+            const offDesign = 165; const wDesign = 85;
 
             const drawTakaHeader = (x, y) => {
                 doc.rect(x, y, colWidth, 20).fill("#e5e7eb"); // Light Grey

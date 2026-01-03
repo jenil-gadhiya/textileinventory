@@ -96,111 +96,117 @@ export function ChallanCreatePage() {
         setSelectedOrder(order);
 
 
-        // Fetch inventory to get stock availability
-        const inventoryData = await fetchInventory();
 
-        // Pre-fill challan items from order line items
-        const items: ChallanItemData[] = await Promise.all(order.lineItems.map(async (item, index) => {
-            const type = item.quantityType || (item as any).catalogType;
-            const isTaka = type === "Taka" || type === "Meter"; // Both Taka and Meter are Taka stock items
+        try {
+            // Fetch inventory to get stock availability
+            const inventoryData = await fetchInventory();
 
-            const qualityId = typeof item.qualityId === "object" ? item.qualityId.id : item.qualityId;
-            const designId = item.designId && typeof item.designId === "object"
-                ? item.designId.id
-                : item.designId;
+            // Pre-fill challan items from order line items
+            const items: ChallanItemData[] = await Promise.all(order.lineItems.map(async (item, index) => {
+                const type = item.quantityType || (item as any).catalogType;
+                const isTaka = type === "Taka" || type === "Meter"; // Both Taka and Meter are Taka stock items
 
-            if (isTaka) {
-                const ordered = item.quantity || 0;
-                const dispatched = item.dispatchedQuantity || 0;
-                const remaining = ordered - dispatched;
+                const getObjId = (obj: any) => obj ? (obj.id || obj._id || obj) : null;
 
-                // Find ALL matching inventory items across all factories and sum their stock
-                const matchingStockItems = inventoryData.filter(inv => {
-                    const invQualityId = inv.qualityId?.id || inv.qualityId;
-                    const invDesignId = inv.designId?.id || inv.designId;
-                    return invQualityId === qualityId &&
-                        (!designId || invDesignId === designId) &&
-                        inv.type === "Taka";
-                });
+                const qualityId = typeof item.qualityId === "object" ? getObjId(item.qualityId) : item.qualityId;
+                const designId = typeof item.designId === "object" ? getObjId(item.designId) : item.designId;
 
-                const availableStock = matchingStockItems.reduce((sum, inv) => sum + (inv.availableMeters || 0), 0);
-                const availableTaka = matchingStockItems.reduce((sum, inv) => sum + (inv.availableTaka || 0), 0);
+                if (isTaka) {
+                    const ordered = item.quantity || 0;
+                    const dispatched = item.dispatchedQuantity || 0;
+                    const remaining = ordered - dispatched;
 
-                // Fetch available pieces for selection
-                const availablePieces = await fetchAvailableStockPieces(qualityId, designId);
+                    // Find ALL matching inventory items across all factories and sum their stock
+                    const matchingStockItems = inventoryData.filter(inv => {
+                        const invQualityId = inv.qualityId?.id || (inv.qualityId as any)?._id || inv.qualityId;
+                        const invDesignId = inv.designId?.id || (inv.designId as any)?._id || inv.designId;
+                        return invQualityId === qualityId &&
+                            (!designId || invDesignId === designId) &&
+                            inv.type === "Taka";
+                    });
 
-                // Auto-select pieces based on quantity type
-                let selectedPieces: StockPiece[] = [];
-                let challanQty = 0;
+                    const availableStock = matchingStockItems.reduce((sum, inv) => sum + (inv.availableMeters || 0), 0);
+                    const availableTaka = matchingStockItems.reduce((sum, inv) => sum + (inv.availableTaka || 0), 0);
 
-                const quantityType = item.quantityType || "Taka";
+                    // Fetch available pieces for selection
+                    const availablePieces = await fetchAvailableStockPieces(qualityId, designId);
 
-                // Initialize with blank/0 quantities as requested
-                selectedPieces = [];
-                challanQty = 0;
+                    // Auto-select pieces based on quantity type
+                    let selectedPieces: StockPiece[] = [];
+                    let challanQty = 0;
 
-                return {
-                    orderLineItemIndex: index,
-                    qualityId,
-                    designId,
-                    type: "Taka",
-                    quantityType,
-                    orderedQuantity: ordered,
-                    challanQuantity: challanQty,
-                    remainingQuantity: remaining,
-                    availableStock,
-                    availableTaka,
-                    availablePieces,
-                    selectedPieces,
-                    selected: true
-                };
-            } else {
-                // Saree  
-                return {
-                    orderLineItemIndex: index,
-                    qualityId,
-                    designId,
-                    type: "Saree",
-                    orderedQuantity: 0,
-                    challanQuantity: 0,
-                    remainingQuantity: 0,
-                    availableStock: 0,
-                    cut: item.cut,
-                    selected: true,
-                    matchingQuantities: item.matchingQuantities?.map((mq) => {
-                        const ordered = mq.quantity || 0;
-                        const dispatched = mq.dispatchedQuantity || 0;
-                        const remaining = ordered - dispatched;
+                    const quantityType = item.quantityType || "Taka";
 
-                        const matchingId = typeof mq.matchingId === "object" ? mq.matchingId.id : mq.matchingId;
+                    // Initialize with blank/0 quantities as requested
+                    selectedPieces = [];
+                    challanQty = 0;
 
-                        // Find ALL matching inventory items across all factories and sum their stock
-                        const matchingStockItems = inventoryData.filter(inv => {
-                            const invQualityId = inv.qualityId?.id || inv.qualityId;
-                            const invDesignId = inv.designId?.id || inv.designId;
-                            const invMatchingId = inv.matchingId?.id || inv.matchingId;
-                            return invQualityId === qualityId &&
-                                (!designId || invDesignId === designId) &&
-                                invMatchingId === matchingId &&
-                                inv.type === "Saree";
-                        });
+                    return {
+                        orderLineItemIndex: index,
+                        qualityId,
+                        designId,
+                        type: "Taka",
+                        quantityType,
+                        orderedQuantity: ordered,
+                        challanQuantity: challanQty,
+                        remainingQuantity: remaining,
+                        availableStock,
+                        availableTaka,
+                        availablePieces,
+                        selectedPieces,
+                        selected: true
+                    };
+                } else {
+                    // Saree  
+                    return {
+                        orderLineItemIndex: index,
+                        qualityId,
+                        designId,
+                        type: "Saree",
+                        orderedQuantity: 0,
+                        challanQuantity: 0,
+                        remainingQuantity: 0,
+                        availableStock: 0,
+                        cut: item.cut,
+                        selected: true,
+                        matchingQuantities: item.matchingQuantities?.map((mq) => {
+                            const ordered = mq.quantity || 0;
+                            const dispatched = mq.dispatchedQuantity || 0;
+                            const remaining = ordered - dispatched;
 
-                        const availableStock = matchingStockItems.reduce((sum, inv) => sum + (inv.availableSaree || 0), 0);
+                            const matchingId = typeof mq.matchingId === "object" ? getObjId(mq.matchingId) : mq.matchingId;
 
-                        return {
-                            matchingId,
-                            orderedQuantity: ordered,
-                            challanQuantity: 0,
-                            remainingQuantity: remaining,
-                            availableStock,
-                        };
-                    }),
-                };
-            }
-        }));
+                            // Find ALL matching inventory items across all factories and sum their stock
+                            const matchingStockItems = inventoryData.filter(inv => {
+                                const invQualityId = inv.qualityId?.id || (inv.qualityId as any)?._id || inv.qualityId;
+                                const invDesignId = inv.designId?.id || (inv.designId as any)?._id || inv.designId;
+                                const invMatchingId = inv.matchingId?.id || (inv.matchingId as any)?._id || inv.matchingId;
+                                return invQualityId === qualityId &&
+                                    (!designId || invDesignId === designId) &&
+                                    invMatchingId === matchingId &&
+                                    inv.type === "Saree";
+                            });
 
-        console.log("Challan items with total stock:", items);
-        setChallanItems(items);
+                            const availableStock = matchingStockItems.reduce((sum, inv) => sum + (inv.availableSaree || 0), 0);
+
+                            return {
+                                matchingId,
+                                orderedQuantity: ordered,
+                                challanQuantity: 0,
+                                remainingQuantity: remaining,
+                                availableStock,
+                            };
+                        }),
+                    };
+                }
+            }));
+
+            console.log("Challan items with total stock:", items);
+            setChallanItems(items);
+        } catch (error) {
+            console.error("Error generating challan items:", error);
+            setError("Failed to load order items. Please check console for details.");
+        }
     };
 
     const updateChallanQuantity = (

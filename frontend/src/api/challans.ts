@@ -1,5 +1,5 @@
 // Challan API functions
-const API_BASE = "http://localhost:5005/api";
+import { http } from "./http";
 
 export interface ChallanItem {
     orderLineItemIndex: number;
@@ -30,39 +30,20 @@ export interface Challan {
 }
 
 export async function fetchChallans(): Promise<Challan[]> {
-    const response = await fetch(`${API_BASE}/challans`);
-    if (!response.ok) throw new Error("Failed to fetch challans");
-    return response.json();
+    const response = await http.get("/challans");
+    return response.data;
 }
 
 export async function fetchChallan(id: string): Promise<Challan> {
-    const response = await fetch(`${API_BASE}/challans/${id}`);
-    if (!response.ok) throw new Error("Failed to fetch challan");
-    return response.json();
+    const response = await http.get(`/challans/${id}`);
+    return response.data;
 }
 
 export async function createChallan(challanData: any): Promise<Challan> {
-    const response = await fetch(`${API_BASE}/challans`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(challanData),
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw error;
-    }
-
-    return response.json();
+    const response = await http.post("/challans", challanData);
+    return response.data;
 }
 
 export async function deleteChallan(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE}/challans/${id}`, {
-        method: "DELETE",
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw error;
-    }
+    await http.delete(`/challans/${id}`);
 }

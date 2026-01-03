@@ -1,5 +1,5 @@
 // StockPiece API functions
-const API_BASE = "http://localhost:5005/api";
+import { http } from "./http";
 
 export interface StockPiece {
     id: string;
@@ -33,11 +33,8 @@ export async function fetchAvailableStockPieces(
     if (designId) params.append("designId", designId);
     if (factoryId) params.append("factoryId", factoryId);
 
-    const response = await fetch(`${API_BASE}/stock-pieces/available?${params}`);
-    if (!response.ok) {
-        throw new Error("Failed to fetch stock pieces");
-    }
-    return response.json();
+    const response = await http.get(`/stock-pieces/available?${params}`);
+    return response.data;
 }
 
 export async function updateStockPieceStatus(
@@ -45,13 +42,6 @@ export async function updateStockPieceStatus(
     status: "Available" | "Sold",
     challanId?: string
 ): Promise<StockPiece> {
-    const response = await fetch(`${API_BASE}/stock-pieces/${id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status, challanId }),
-    });
-    if (!response.ok) {
-        throw new Error("Failed to update stock piece status");
-    }
-    return response.json();
+    const response = await http.patch(`/stock-pieces/${id}/status`, { status, challanId });
+    return response.data;
 }

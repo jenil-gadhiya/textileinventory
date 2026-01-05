@@ -182,6 +182,25 @@ export function ChallanListPage() {
                         <p className="text-body">{selectedChallan.remarks}</p>
                     </div>
                 )}
+
+                {/* Actions */}
+                <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-white/10">
+                    <Button
+                        variant="secondary"
+                        onClick={() => setIsDetailModalOpen(false)}
+                    >
+                        Close
+                    </Button>
+                    <Button
+                        onClick={() => {
+                            const id = selectedChallan.id || (selectedChallan as any)._id;
+                            setIsDetailModalOpen(false);
+                            navigate(`/challans/edit/${id}`);
+                        }}
+                    >
+                        Edit
+                    </Button>
+                </div>
             </div>
         );
     };

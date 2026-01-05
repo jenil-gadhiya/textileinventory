@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { fetchOrders } from "@/api/orders";
-import { createChallan } from "@/api/challans";
+import { createChallan, fetchChallan } from "@/api/challans";
 import { Order } from "@/types/stock";
 import { fetchInventory, InventoryItem } from "@/api/inventory";
 import { fetchAvailableStockPieces, StockPiece } from "@/api/stockPieces";
@@ -36,6 +36,8 @@ interface ChallanItemData {
 
 export function ChallanCreatePage() {
     const navigate = useNavigate();
+    const { id } = useParams();
+
     const [orders, setOrders] = useState<Order[]>([]);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [challanItems, setChallanItems] = useState<ChallanItemData[]>([]);
@@ -47,6 +49,13 @@ export function ChallanCreatePage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [takaSearchQueries, setTakaSearchQueries] = useState<{ [key: number]: string }>({});
+
+    useEffect(() => {
+        if (id) {
+            console.log("Edit mode enabled for Challan ID:", id);
+            // TODO: Fetch challan details and populate form
+        }
+    }, [id]);
 
     useEffect(() => {
         loadOrders();
@@ -423,8 +432,8 @@ export function ChallanCreatePage() {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <PageHeader
-                    title="Create Challan"
-                    subtitle="Generate delivery challan from order"
+                    title={id ? "Edit Challan" : "Create Challan"}
+                    subtitle={id ? "Modify existing delivery challan" : "Generate delivery challan from order"}
                 />
                 <Button
                     variant="secondary"

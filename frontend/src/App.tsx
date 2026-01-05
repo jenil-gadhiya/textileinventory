@@ -84,6 +84,7 @@ export default function App() {
 
         <Route path="/challans" element={<ChallanListPage />} />
         <Route path="/challans/create" element={<ChallanCreatePage />} />
+        <Route path="/challans/edit/:id" element={<ChallanCreatePage />} />
 
         <Route path="/inventory/report" element={<StockReportPage />} />
 

@@ -93,6 +93,7 @@ export const createChallan = async (req, res, next) => {
 };
 
 // Helper: Validate stock for challan
+// Helper: Validate stock for challan - Validate against Physical Stock (Produced)
 async function validateChallanStock(items, session) {
     const insufficientItems = [];
 
@@ -110,14 +111,15 @@ async function validateChallanStock(items, session) {
             if ((item.quantityType === "Taka" || !item.quantityType) && item.selectedPieces && item.selectedPieces.length > 0) {
                 required = item.selectedPieces.reduce((sum, p) => sum + (p.meter || 0), 0);
             }
-            const available = inventories.reduce((sum, inv) => sum + (inv.availableMeters || 0), 0);
+            // Use Total Produced as available stock (We are fulfilling a reservation, so we ignore 'Ordered' count)
+            const available = inventories.reduce((sum, inv) => sum + (inv.totalMetersProduced || 0), 0);
 
             if (available < required) {
                 insufficientItems.push({
                     qualityName: inventories[0]?.qualityId?.fabricName || "Unknown",
                     type: "Taka",
                     required,
-                    available,
+                    available, // This is physical stock
                     shortage: required - available,
                 });
             }
@@ -135,7 +137,8 @@ async function validateChallanStock(items, session) {
                     .session(session);
 
                 const required = mq.challanQuantity || 0;
-                const available = inventories.reduce((sum, inv) => sum + (inv.availableSaree || 0), 0);
+                // Use Total Produced
+                const available = inventories.reduce((sum, inv) => sum + (inv.totalSareeProduced || 0), 0);
 
                 if (available < required) {
                     insufficientItems.push({
@@ -158,13 +161,14 @@ async function validateChallanStock(items, session) {
 }
 
 // Helper: Deduct inventory for challan (Smart deduction - deduct from factory with MORE stock first)
+// Helper: Deduct inventory for challan (Consumes Stock + Reservation)
 async function deductInventoryForChallan(challanItems, session = null) {
     for (const item of challanItems) {
         if (item.type === "Taka") {
             // Count how many pieces are being dispatched
             const piecesCount = item.selectedPieces ? item.selectedPieces.length : 0;
 
-            // Mark selected pieces as "Sold" if they exist
+            // Mark selected pieces as "Sold"
             if (item.selectedPieces && item.selectedPieces.length > 0) {
                 for (const piece of item.selectedPieces) {
                     if (piece.stockPieceId) {
@@ -177,11 +181,7 @@ async function deductInventoryForChallan(challanItems, session = null) {
                 }
             }
 
-            // Determine correct meters to deduct
-            // If quantityType is Taka (Pieces), challanQuantity is piece count, so we must sum the meters of selected pieces
-            // If quantityType is Meter, challanQuantity is already meters
             let totalMetersToDeduct = item.challanQuantity || 0;
-
             if ((item.quantityType === "Taka" || !item.quantityType) && item.selectedPieces && item.selectedPieces.length > 0) {
                 totalMetersToDeduct = item.selectedPieces.reduce((sum, p) => sum + (p.meter || 0), 0);
             }
@@ -189,23 +189,21 @@ async function deductInventoryForChallan(challanItems, session = null) {
             let remainingToDeduct = totalMetersToDeduct;
             let remainingPiecesToDeduct = piecesCount;
 
-            // Find all matching inventories sorted by available stock (highest first)
+            // Find inventories, sort by Total Produced (Physical Stock) to deduct from where we have items
             const inventories = await Inventory.find({
                 qualityId: item.qualityId,
                 type: "Taka",
             }).session(session);
 
-            // Sort by available stock descending (deduct from factory with MORE stock first)
-            inventories.sort((a, b) => b.availableMeters - a.availableMeters);
+            inventories.sort((a, b) => b.totalMetersProduced - a.totalMetersProduced);
 
             for (const inv of inventories) {
                 if (remainingToDeduct <= 0) break;
 
-                const availableInThisFactory = inv.availableMeters;
+                // We limit deduction to what is physically there (totalMetersProduced)
+                const availableInThisFactory = inv.totalMetersProduced;
                 const deductFromThis = Math.min(availableInThisFactory, remainingToDeduct);
 
-                // Calculate how many pieces to deduct from this inventory
-                // Proportionally distribute pieces based on meters
                 const piecesToDeductFromThis = remainingPiecesToDeduct > 0
                     ? Math.ceil((deductFromThis / item.challanQuantity) * piecesCount)
                     : 0;
@@ -215,8 +213,10 @@ async function deductInventoryForChallan(challanItems, session = null) {
                         inv._id,
                         {
                             $inc: {
-                                totalMetersOrdered: deductFromThis,
-                                totalTakaOrdered: piecesToDeductFromThis
+                                totalMetersProduced: -deductFromThis,
+                                totalTakaProduced: -piecesToDeductFromThis,
+                                totalMetersOrdered: -deductFromThis, // Reduce reservation too
+                                totalTakaOrdered: -piecesToDeductFromThis
                             }
                         },
                         { session }
@@ -229,7 +229,6 @@ async function deductInventoryForChallan(challanItems, session = null) {
             for (const mq of item.matchingQuantities || []) {
                 let remainingToDeduct = mq.challanQuantity || 0;
 
-                // Find all matching inventories (ignore cut) sorted by available stock (highest first)
                 const inventories = await Inventory.find({
                     qualityId: item.qualityId,
                     designId: item.designId,
@@ -237,19 +236,23 @@ async function deductInventoryForChallan(challanItems, session = null) {
                     type: "Saree",
                 }).session(session);
 
-                // Sort by available stock descending (deduct from factory with MORE stock first)
-                inventories.sort((a, b) => b.availableSaree - a.availableSaree);
+                inventories.sort((a, b) => b.totalSareeProduced - a.totalSareeProduced);
 
                 for (const inv of inventories) {
                     if (remainingToDeduct <= 0) break;
 
-                    const availableInThisFactory = inv.availableSaree;
+                    const availableInThisFactory = inv.totalSareeProduced;
                     const deductFromThis = Math.min(availableInThisFactory, remainingToDeduct);
 
                     if (deductFromThis > 0) {
                         await Inventory.findByIdAndUpdate(
                             inv._id,
-                            { $inc: { totalSareeOrdered: deductFromThis } },
+                            {
+                                $inc: {
+                                    totalSareeProduced: -deductFromThis,
+                                    totalSareeOrdered: -deductFromThis
+                                }
+                            },
                             { session }
                         );
                         remainingToDeduct -= deductFromThis;
@@ -332,8 +335,9 @@ export const updateChallan = async (req, res, next) => {
             return res.status(404).json({ message: "Challan not found" });
         }
 
-        // 2. REVERT OLD STOCK & ORDER STATUS
-        // This is effectively "undoing" the previous challan so we can apply the new one cleanly
+        // 2. REVERT OLD STOCK - Restore Produced and Ordered counts (Add them back)
+        // This is the opposite of 'deductInventoryForChallan'
+        // We put back the stock as if the challan never happened, so it is "Produced" and "Reserved (Ordered)" again.
         for (const item of oldChallan.items) {
             if (item.type === "Taka" && item.selectedPieces && item.selectedPieces.length > 0) {
                 // Restore StockPieces
@@ -354,8 +358,10 @@ export const updateChallan = async (req, res, next) => {
                     },
                     {
                         $inc: {
-                            totalMetersOrdered: -item.challanQuantity,
-                            totalTakaOrdered: -item.selectedPieces.length
+                            totalMetersProduced: item.challanQuantity,
+                            totalTakaProduced: item.selectedPieces.length,
+                            totalMetersOrdered: item.challanQuantity,
+                            totalTakaOrdered: item.selectedPieces.length
                         }
                     },
                     { session }
@@ -373,7 +379,8 @@ export const updateChallan = async (req, res, next) => {
                         },
                         {
                             $inc: {
-                                totalSareeOrdered: -mq.challanQuantity
+                                totalSareeProduced: mq.challanQuantity,
+                                totalSareeOrdered: mq.challanQuantity
                             }
                         },
                         { session }
@@ -466,7 +473,7 @@ export const deleteChallan = async (req, res, next) => {
             return res.status(404).json({ message: "Challan not found" });
         }
 
-        // Reverse inventory deductions (add back to inventory)
+        // Reverse inventory deductions (Add back logic)
         for (const item of challan.items) {
             if (item.type === "Taka" && item.selectedPieces && item.selectedPieces.length > 0) {
                 // Restore StockPieces back to Available status
@@ -479,7 +486,6 @@ export const deleteChallan = async (req, res, next) => {
                 }
 
                 // Add back to inventory (reverse the deduction)
-                // We must use challanQuantity for meters to be symmetric with creation
                 const totalMeters = item.challanQuantity;
                 await Inventory.findOneAndUpdate(
                     {
@@ -489,8 +495,10 @@ export const deleteChallan = async (req, res, next) => {
                     },
                     {
                         $inc: {
-                            totalMetersOrdered: -totalMeters, // Negative to restore stock (reduce ordered count)
-                            totalTakaOrdered: -item.selectedPieces.length // Negative to restore stock
+                            totalMetersProduced: totalMeters,
+                            totalTakaProduced: item.selectedPieces.length,
+                            totalMetersOrdered: totalMeters,
+                            totalTakaOrdered: item.selectedPieces.length
                         }
                     },
                     { session }
@@ -508,7 +516,8 @@ export const deleteChallan = async (req, res, next) => {
                         },
                         {
                             $inc: {
-                                totalSareeOrdered: -mq.challanQuantity // Negative to restore stock
+                                totalSareeProduced: mq.challanQuantity,
+                                totalSareeOrdered: mq.challanQuantity
                             }
                         },
                         { session }

@@ -1,10 +1,8 @@
 import { Order } from "../models/Order.js";
-// import mongoose from "mongoose"; // Removed as transactions are no longer used in createOrder
-// Removed as stock logic is no longer in createOrder
-// import {
-//     validateStockAvailability,
-//     deductInventoryForOrder,
-// } from "./inventoryController.js";
+import {
+    validateStockAvailability,
+    reserveInventoryForOrder,
+} from "./inventoryController.js";
 
 export const getOrders = async (req, res, next) => {
     try {
@@ -42,13 +40,20 @@ export const getOrder = async (req, res, next) => {
     }
 };
 
-// CHANGED: Order creation NO longer deducts stock
-// Stock will be deducted when Challan is created
+// CHANGED: Order creation NOW deducts stock (reserves it)
+// Stock will be physically reduced when Challan is created
 export const createOrder = async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
-        // Simply create order - NO stock validation or deduction
         const order = new Order(req.body);
-        await order.save();
+        await order.save({ session });
+
+        // Reserve inventory for this order
+        await reserveInventoryForOrder(order.lineItems, session);
+
+        await session.commitTransaction();
 
         // Return populated order
         const populated = await Order.findById(order._id)
@@ -62,7 +67,10 @@ export const createOrder = async (req, res, next) => {
 
         res.status(201).json(populated);
     } catch (error) {
+        await session.abortTransaction();
         next(error);
+    } finally {
+        session.endSession();
     }
 };
 

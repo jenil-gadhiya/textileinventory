@@ -208,12 +208,13 @@ export async function updateInventoryFromProduction(
 
 // Helper function to deduct stock after order
 // Helper function to deduct stock after order
-export async function deductInventoryForOrder(lineItems, session = null) {
+// Helper function to reserve stock when order is placed
+export async function reserveInventoryForOrder(lineItems, session = null) {
     for (const item of lineItems) {
         const type = item.quantityType || item.catalogType;
 
         if (type === "Taka") {
-            // Find best inventory to deduct from (prioritize positive stock)
+            // Find best inventory to reserve (this is just for tracking, doesn't lock specific items)
             const candidates = await Inventory.find({
                 qualityId: item.qualityId,
                 designId: item.designId,
@@ -226,24 +227,18 @@ export async function deductInventoryForOrder(lineItems, session = null) {
                 await Inventory.findByIdAndUpdate(
                     target._id,
                     {
-                        $inc: { totalMetersOrdered: item.quantity || 0 },
+                        $inc: { totalMetersOrdered: item.quantity || 0 }, // Increase Ordered
                     },
                     { session }
                 );
             } else {
-                // No inventory exists yet (no production). 
-                // We must create a "placeholder" inventory to track this order.
-                // Since we don't know the factory, we might leave it null or pick a default?
-                // But schema might require factoryId? No, it's optional in schema.
-                // However, let's try to find ANY factory associated with this quality?
-                // For now, create without factory if allowed, or skip (but that loses tracking).
-                // Better: Create with null factoryId.
+                // If no inventory exists, create a placeholder to track this shortage
                 await Inventory.create([{
                     qualityId: item.qualityId,
                     designId: item.designId,
                     type: "Taka",
                     totalMetersOrdered: item.quantity || 0,
-                    // factoryId underfined
+                    // factoryId undefined
                 }], { session });
             }
 
@@ -255,8 +250,7 @@ export async function deductInventoryForOrder(lineItems, session = null) {
                     matchingId: mq.matchingId,
                     type: "Saree",
                     cut: item.cut,
-                }).sort({ availableSaree: -1 }).session(session); // Use availableSaree virtual if possible, but sort might not work on virtuals in DB.
-                // Virtuals aren't in DB. Sort by totalSareeProduceddesc.
+                }).sort({ availableSaree: -1 }).session(session);
 
                 let target = candidates[0];
 
@@ -264,7 +258,7 @@ export async function deductInventoryForOrder(lineItems, session = null) {
                     await Inventory.findByIdAndUpdate(
                         target._id,
                         {
-                            $inc: { totalSareeOrdered: mq.quantity || 0 },
+                            $inc: { totalSareeOrdered: mq.quantity || 0 }, // Increase Ordered
                         },
                         { session }
                     );

@@ -47,11 +47,17 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
     }, [isOpen, editingItem]);
 
     const loadEditingData = (item: OrderLineItem) => {
-        const qId = typeof item.qualityId === "object" ? item.qualityId.id : item.qualityId;
-        const dId = typeof item.designId === "object" ? item.designId.id : item.designId;
+        // Handle both _id (from DB) and id (frontend mapped)
+        const qId = typeof item.qualityId === "object"
+            ? ((item.qualityId as any)._id || item.qualityId.id)
+            : item.qualityId;
 
-        setQualityId(qId);
-        setDesignId(dId);
+        const dId = typeof item.designId === "object"
+            ? ((item.designId as any)._id || item.designId.id)
+            : item.designId;
+
+        setQualityId(qId || "");
+        setDesignId(dId || "");
         setCatalogType(item.catalogType);
         setRate(item.rate);
 
@@ -165,11 +171,13 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
 
             if (designEntries.length > 0) {
                 const matchingMap = new Map();
+
+                // 1. Build map from catalog
                 designEntries.forEach((entry: any) => {
                     if (entry.matchingId) {
                         const matching = typeof entry.matchingId === "object" ? entry.matchingId : null;
                         if (matching) {
-                            const matchingIdStr = matching._id || matching.id || matching;
+                            const matchingIdStr = (matching._id || matching.id || matching).toString();
                             if (!matchingMap.has(matchingIdStr)) {
                                 matchingMap.set(matchingIdStr, {
                                     matchingId: matchingIdStr,
@@ -180,7 +188,39 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
                         }
                     }
                 });
+
+                // 2. Merge with editingItem quantities if applicable
+                if (editingItem) {
+                    const editingDesignId = typeof editingItem.designId === "object"
+                        ? ((editingItem.designId as any)._id || editingItem.designId.id)
+                        : editingItem.designId;
+
+                    if (editingDesignId === designId && editingItem.matchingQuantities) {
+                        editingItem.matchingQuantities.forEach(mq => {
+                            const mId = typeof mq.matchingId === "object"
+                                ? ((mq.matchingId as any)._id || mq.matchingId.id)
+                                : mq.matchingId;
+
+                            if (mId && matchingMap.has(mId.toString())) {
+                                const existing = matchingMap.get(mId.toString());
+                                existing.quantity = mq.quantity;
+                                matchingMap.set(mId.toString(), existing);
+                            }
+                        });
+                    }
+                }
+
                 setMatchingQuantities(Array.from(matchingMap.values()));
+                // Only set cut if NOT editing or if cut is 0? 
+                // Actually loadEditingData sets 'cut' state.
+                // fetchMatchingsForDesign logic (line 184 in original) was: setCut(designEntries[0].cut || 0);
+                // If we are editing, we want the cut from the OrderLineItem, not necessarily the catalog default (though they should match usually).
+                // But if user changed it? (Cut is usually readOnly from catalog).
+                // OrderLineItem has 'cut'.
+                // If I overwrite 'cut' here, I might lose editingItem.cut if it differs.
+                // But cut is readOnly in the form. So it should match catalog.
+                // Let's stick to catalog cut, or editingItem cut if matches.
+                // Since cut is readOnly, catalog cut is correct source of truth.
                 setCut(designEntries[0].cut || 0);
             }
         } catch (error) {

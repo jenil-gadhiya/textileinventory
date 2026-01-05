@@ -44,6 +44,11 @@ export async function createChallan(challanData: any): Promise<Challan> {
     return response.data;
 }
 
+export async function updateChallan(id: string, challanData: any): Promise<Challan> {
+    const response = await http.put(`/challans/${id}`, challanData);
+    return response.data;
+}
+
 export async function deleteChallan(id: string): Promise<void> {
     await http.delete(`/challans/${id}`);
 }

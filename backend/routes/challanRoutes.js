@@ -3,6 +3,7 @@ import {
     getChallans,
     getChallan,
     createChallan,
+    updateChallan,
     deleteChallan,
 } from "../controllers/challanController.js";
 import { generateChallanPDF } from "../controllers/challanPDFController.js";
@@ -20,6 +21,9 @@ router.get("/:id", getChallan);
 
 // Create challan from order
 router.post("/", createChallan);
+
+// Update challan
+router.put("/:id", updateChallan);
 
 // Delete challan
 router.delete("/:id", deleteChallan);

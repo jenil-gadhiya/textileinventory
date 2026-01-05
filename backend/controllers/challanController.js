@@ -316,6 +316,143 @@ async function updateOrderDispatchStatus(orderId, challanItems, session) {
     await order.save({ session });
 }
 
+// PUT /api/challans/:id - Update challan
+export const updateChallan = async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const { id } = req.params;
+        const { items, ...updateData } = req.body;
+
+        // 1. Get existing challan
+        const oldChallan = await Challan.findById(id).session(session);
+        if (!oldChallan) {
+            await session.abortTransaction();
+            return res.status(404).json({ message: "Challan not found" });
+        }
+
+        // 2. REVERT OLD STOCK & ORDER STATUS
+        // This is effectively "undoing" the previous challan so we can apply the new one cleanly
+        for (const item of oldChallan.items) {
+            if (item.type === "Taka" && item.selectedPieces && item.selectedPieces.length > 0) {
+                // Restore StockPieces
+                for (const piece of item.selectedPieces) {
+                    await StockPiece.findByIdAndUpdate(
+                        piece.stockPieceId,
+                        { status: "Available", challanId: null },
+                        { session }
+                    );
+                }
+
+                // Restore Inventory (Meters & Pieces)
+                await Inventory.findOneAndUpdate(
+                    {
+                        qualityId: item.qualityId,
+                        designId: item.designId,
+                        type: "Taka"
+                    },
+                    {
+                        $inc: {
+                            totalMetersOrdered: -item.challanQuantity,
+                            totalTakaOrdered: -item.selectedPieces.length
+                        }
+                    },
+                    { session }
+                );
+            } else if (item.type === "Saree" && item.matchingQuantities) {
+                // Restore Saree Inventory
+                for (const mq of item.matchingQuantities) {
+                    await Inventory.findOneAndUpdate(
+                        {
+                            qualityId: item.qualityId,
+                            designId: item.designId,
+                            matchingId: mq.matchingId,
+                            type: "Saree",
+                            cut: item.cut
+                        },
+                        {
+                            $inc: {
+                                totalSareeOrdered: -mq.challanQuantity
+                            }
+                        },
+                        { session }
+                    );
+                }
+            }
+        }
+
+        // Revert Order Dispatched Quantities
+        const order = await Order.findById(oldChallan.orderId).session(session);
+        if (order) {
+            for (const item of oldChallan.items) {
+                const orderItem = order.lineItems[item.orderLineItemIndex];
+                if (orderItem) {
+                    if (item.type === "Taka") {
+                        orderItem.dispatchedQuantity = Math.max(0, (orderItem.dispatchedQuantity || 0) - item.challanQuantity);
+                    } else if (item.matchingQuantities) {
+                        for (const mq of item.matchingQuantities) {
+                            const orderMq = orderItem.matchingQuantities?.find(
+                                omq => omq.matchingId?.toString() === mq.matchingId?.toString()
+                            );
+                            if (orderMq) {
+                                orderMq.dispatchedQuantity = Math.max(0, (orderMq.dispatchedQuantity || 0) - mq.challanQuantity);
+                            }
+                        }
+                    }
+                }
+            }
+            // We don't save order here yet, we'll do it after re-applying new values
+        }
+
+        // 3. VALIDATE NEW STOCK
+        const validationResult = await validateChallanStock(items, session);
+        if (!validationResult.valid) {
+            await session.abortTransaction();
+            return res.status(400).json({
+                message: "Insufficient stock for one or more items",
+                insufficientItems: validationResult.insufficientItems,
+            });
+        }
+
+        // 4. APPLY NEW STOCK
+        await deductInventoryForChallan(items, session);
+
+        // 5. UPDATE ORDER WITH NEW QUANTITIES
+        // We reuse the update helper but pass the *already modified* order object if possible?
+        // Actually `updateOrderDispatchStatus` fetches the order again.
+        // We must save the "Revert" changes to the order first?
+        // Yes, because `updateOrderDispatchStatus` does `Order.findById`.
+        // So we must save the reverted order state first.
+        if (order) await order.save({ session });
+
+        // Now apply new
+        await updateOrderDispatchStatus(oldChallan.orderId, items, session);
+
+        // 6. UPDATE CHALLAN DOCUMENT
+        // Merge items into updateData
+        const updatedChallan = await Challan.findByIdAndUpdate(
+            id,
+            { ...updateData, items },
+            { new: true, session }
+        )
+            .populate("orderId")
+            .populate("partyId")
+            .populate("items.qualityId")
+            .populate("items.designId")
+            .populate("items.matchingQuantities.matchingId");
+
+        await session.commitTransaction();
+        res.json(updatedChallan);
+
+    } catch (error) {
+        await session.abortTransaction();
+        next(error);
+    } finally {
+        session.endSession();
+    }
+};
+
 // DELETE /api/challans/:id - Delete challan and reverse inventory
 export const deleteChallan = async (req, res, next) => {
     const session = await mongoose.startSession();

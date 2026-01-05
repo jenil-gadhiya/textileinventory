@@ -274,36 +274,11 @@ export function StockReportPage() {
                                     </select>
                                 </div>
                             </div>
-
-
-                            {/* Summary Stats */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-                                <div className="bg-surface-300 rounded p-3">
-                                    <div className="text-xs text-muted">Total Items</div>
-                                    <div className="text-lg font-semibold text-body">{inventory.length}</div>
-                                </div>
-                                <div className="bg-surface-300 rounded p-3">
-                                    <div className="text-xs text-muted">Taka Stock</div>
-                                    <div className="text-lg font-semibold text-body">
-                                        {inventory.filter(i => i.type === "Taka").length}
-                                    </div>
-                                </div>
-                                <div className="bg-surface-300 rounded p-3">
-                                    <div className="text-xs text-muted">Saree Stock</div>
-                                    <div className="text-lg font-semibold text-body">
-                                        {inventory.filter(i => i.type === "Saree").length}
-                                    </div>
-                                </div>
-                                <div className="bg-surface-300 rounded p-3">
-                                    <div className="text-xs text-muted">Low Stock Items</div>
-                                    <div className="text-lg font-semibold text-red-500">
-                                        {inventory.filter(i =>
-                                            i.type === "Taka" ? i.availableMeters < 50 : i.availableSaree < 10
-                                        ).length}
-                                    </div>
-                                </div>
-                            </div>
                         </div>
+
+
+
+
 
                         {/* Totals Summary - Moved to top */}
                         {inventory.length > 0 && (hasTaka || hasSaree) && (

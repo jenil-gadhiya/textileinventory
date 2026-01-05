@@ -160,6 +160,22 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
     const fetchMatchingsForDesign = async (targetDesignId: string) => {
         if (!targetDesignId) return;
 
+        // Safety Net: If the target design matches the one we are editing, 
+        // ALWAYS prefer the editingItem's data over a fresh fetch.
+        // This prevents accidental resets if this function is called redundantly.
+        if (editingItem && editingItem.catalogType === catalogType) {
+            const editingDId = typeof editingItem.designId === "object"
+                ? ((editingItem.designId as any)._id || editingItem.designId.id)
+                : editingItem.designId;
+
+            if (editingDId && editingDId.toString() === targetDesignId.toString()) {
+                // Restore from editing item to ensure data persistence
+                setMatchingQuantities(editingItem.matchingQuantities || []);
+                setCut(editingItem.cut || 0);
+                return;
+            }
+        }
+
         // Otherwise fetch fresh from catalog
         try {
             const catalogEntries = await getCatalogByQuality(qualityId);

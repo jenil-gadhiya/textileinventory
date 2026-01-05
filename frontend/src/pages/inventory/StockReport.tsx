@@ -282,7 +282,7 @@ export function StockReportPage() {
 
                         {/* Totals Summary - Moved to top */}
                         {inventory.length > 0 && (hasTaka || hasSaree) && (
-                            <div className={`mb-6 grid ${hasTaka && hasSaree ? "grid-cols-2" : "grid-cols-1"} gap-4 bg-surface-300/50 p-4 rounded-lg border border-border/10`}>
+                            <div className={`mb-6 grid grid-cols-1 ${hasTaka && hasSaree ? "md:grid-cols-2" : ""} gap-4 bg-surface-300/50 p-4 rounded-lg border border-border/10`}>
                                 {/* Taka Totals */}
                                 {hasTaka && (
                                     <div className="space-y-2">

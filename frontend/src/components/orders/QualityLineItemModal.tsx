@@ -160,6 +160,20 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
     };
 
     const fetchMatchingsForDesign = async () => {
+        // 1. Check if we should restore from editingItem (Edit Mode)
+        if (editingItem && editingItem.catalogType === catalogType) {
+            const editingDId = typeof editingItem.designId === "object"
+                ? ((editingItem.designId as any)._id || editingItem.designId.id)
+                : editingItem.designId;
+
+            if (editingDId && designId && editingDId.toString() === designId.toString()) {
+                setMatchingQuantities(editingItem.matchingQuantities || []);
+                setCut(editingItem.cut || 0);
+                return;
+            }
+        }
+
+        // 2. Otherwise fetch fresh from catalog
         try {
             const catalogEntries = await getCatalogByQuality(qualityId);
             const designEntries = catalogEntries.filter((entry: any) => {
@@ -172,7 +186,6 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
             if (designEntries.length > 0) {
                 const matchingMap = new Map();
 
-                // 1. Build map from catalog
                 designEntries.forEach((entry: any) => {
                     if (entry.matchingId) {
                         const matching = typeof entry.matchingId === "object" ? entry.matchingId : null;
@@ -189,38 +202,7 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
                     }
                 });
 
-                // 2. Merge with editingItem quantities if applicable
-                if (editingItem) {
-                    const editingDesignId = typeof editingItem.designId === "object"
-                        ? ((editingItem.designId as any)._id || editingItem.designId.id)
-                        : editingItem.designId;
-
-                    if (editingDesignId === designId && editingItem.matchingQuantities) {
-                        editingItem.matchingQuantities.forEach(mq => {
-                            const mId = typeof mq.matchingId === "object"
-                                ? ((mq.matchingId as any)._id || mq.matchingId.id)
-                                : mq.matchingId;
-
-                            if (mId && matchingMap.has(mId.toString())) {
-                                const existing = matchingMap.get(mId.toString());
-                                existing.quantity = mq.quantity;
-                                matchingMap.set(mId.toString(), existing);
-                            }
-                        });
-                    }
-                }
-
                 setMatchingQuantities(Array.from(matchingMap.values()));
-                // Only set cut if NOT editing or if cut is 0? 
-                // Actually loadEditingData sets 'cut' state.
-                // fetchMatchingsForDesign logic (line 184 in original) was: setCut(designEntries[0].cut || 0);
-                // If we are editing, we want the cut from the OrderLineItem, not necessarily the catalog default (though they should match usually).
-                // But if user changed it? (Cut is usually readOnly from catalog).
-                // OrderLineItem has 'cut'.
-                // If I overwrite 'cut' here, I might lose editingItem.cut if it differs.
-                // But cut is readOnly in the form. So it should match catalog.
-                // Let's stick to catalog cut, or editingItem cut if matches.
-                // Since cut is readOnly, catalog cut is correct source of truth.
                 setCut(designEntries[0].cut || 0);
             }
         } catch (error) {

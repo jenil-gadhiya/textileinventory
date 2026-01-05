@@ -498,7 +498,7 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
                                 <option value="">Select Design</option>
                                 {availableDesigns.map((d: any) => (
                                     <option key={d._id || d.id} value={d._id || d.id}>
-                                        {d.designNumber} {d.designName ? `- ${d.designName} ` : ""}
+                                        {d.designNumber} {d.designName && d.designName.trim() ? `- ${d.designName}` : ""}
                                     </option>
                                 ))}
                             </select>

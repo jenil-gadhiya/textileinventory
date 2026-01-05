@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useStockStore } from "@/store/useStockStore";
 import { QualityLineItemModal } from "@/components/orders/QualityLineItemModal";
-import { createOrder } from "@/api/orders";
+import { createOrder, getOrder, updateOrder } from "@/api/orders";
 import { OrderLineItem } from "@/types/stock";
 
 export function OrderEntryPage() {
     const navigate = useNavigate();
+    const { id } = useParams<{ id: string }>();
+    const isEditMode = Boolean(id);
     const { parties, factories } = useStockStore();
     const [brokers, setBrokers] = useState<any[]>([]);
     const [salesmen, setSalesmen] = useState<any[]>([]);
@@ -48,6 +50,51 @@ export function OrderEntryPage() {
         };
         loadData();
     }, []);
+
+    // Load order data if editing
+    useEffect(() => {
+        if (!id) return;
+
+        const loadOrder = async () => {
+            try {
+                setLoading(true);
+                const order = await getOrder(id);
+
+                // Format date to YYYY-MM-DD
+                if (order.date) {
+                    const d = new Date(order.date);
+                    setDate(d.toISOString().split('T')[0]);
+                }
+
+                // Handle populated fields
+                setPartyId(typeof order.partyId === 'object' ? (order.partyId as any)._id : order.partyId);
+                setFactoryId(order.factoryId ? (typeof order.factoryId === 'object' ? (order.factoryId as any)._id : order.factoryId) as string : "");
+                setBrokerId(order.brokerId ? (typeof order.brokerId === 'object' ? (order.brokerId as any)._id : order.brokerId) as string : "");
+                setSalesmanId(order.salesmanId ? (typeof order.salesmanId === 'object' ? (order.salesmanId as any)._id : order.salesmanId) as string : "");
+
+                setPaymentTerms(order.paymentTerms || "");
+                setDeliveryTerms(order.deliveryTerms || "");
+                setRemarks(order.remarks || "");
+
+                // Transform line items if necessary (usually they come as objects with populated sub-fields, 
+                // but OrderLineItem interface might expect IDs or Objects. 
+                // The Modal expects objects with ._id for selection usually, but storing them...
+                // The backend stores IDs. The GET request populates them.
+                // Our LineItemModal and display logic needs to handle populated objects. 
+                // Existing getLineItemDisplay handles objects: `typeof item.qualityId === "object"`.
+                // So we can just set them directly.
+                setLineItems(order.lineItems);
+
+            } catch (error) {
+                console.error("Error fetching order:", error);
+                alert("Failed to load order details");
+                navigate("/orders");
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadOrder();
+    }, [id, navigate]);
 
     const handleAddLineItem = (lineItem: OrderLineItem) => {
         if (editingIndex !== null) {
@@ -89,45 +136,55 @@ export function OrderEntryPage() {
         try {
             setLoading(true);
 
+            // Depopulate line items for saving: ensure qualityId, designId, matchingId are just IDs strings
+            const formattedLineItems = lineItems.map(item => ({
+                ...item,
+                qualityId: typeof item.qualityId === 'object' ? (item.qualityId as any)._id : item.qualityId,
+                designId: typeof item.designId === 'object' ? (item.designId as any)._id : item.designId,
+                // Matching IDs are tricky because they are inside matchingQuantities in some contexts, 
+                // but for OrderLineItem, do we have a top level matchingId? 
+                // Let's check the type definition.
+                // Looking at getLineItemDisplay, it doesn't show matching.
+                // Let's assume standard structure. If there's nested objects, we flatten them to IDs.
+                matchingQuantities: item.matchingQuantities?.map(mq => ({
+                    ...mq,
+                    matchingId: typeof mq.matchingId === 'object' ? (mq.matchingId as any)._id : mq.matchingId
+                }))
+            }));
+
             const payload: any = {
                 date,
                 partyId,
                 paymentTerms,
                 deliveryTerms,
                 remarks,
-                lineItems,
+                lineItems: formattedLineItems,
                 totalAmount: calculateTotalAmount()
             };
 
-            if (factoryId) {
-                payload.factoryId = factoryId;
-            }
+            if (factoryId) payload.factoryId = factoryId;
 
             // Only include brokerId if a broker is actually selected and is a valid ObjectId
-            // MongoDB ObjectId is 24 hex characters
             const isValidObjectId = (id: string) => /^[0-9a-fA-F]{24}$/.test(id);
 
             if (brokerId && brokerId.trim() && isValidObjectId(brokerId)) {
                 payload.brokerId = brokerId;
-            } else if (brokerId && brokerId.trim()) {
-                console.warn("Invalid brokerId detected, will not include in payload:", brokerId);
             }
-
-            // Validate and include salesmanId if provided
-            console.log("salesmanId value:", salesmanId);
-            console.log("salesmanId is valid ObjectId?", isValidObjectId(salesmanId));
 
             if (salesmanId && salesmanId.trim() && isValidObjectId(salesmanId)) {
                 payload.salesmanId = salesmanId;
             }
 
-            console.log("Order payload being sent:", JSON.stringify(payload, null, 2));
+            if (isEditMode && id) {
+                await updateOrder(id, payload);
+            } else {
+                await createOrder(payload);
+            }
 
-            await createOrder(payload);
             navigate("/orders");
         } catch (error: any) {
-            console.error("Error creating order:", error);
-            const errorMsg = error?.response?.data?.message || "Failed to create order";
+            console.error("Error saving order:", error);
+            const errorMsg = error?.response?.data?.message || "Failed to save order";
             alert(errorMsg);
         } finally {
             setLoading(false);
@@ -135,9 +192,9 @@ export function OrderEntryPage() {
     };
 
     const getLineItemDisplay = (item: OrderLineItem) => {
-        const quality = typeof item.qualityId === "object" ? item.qualityId.fabricName : "";
-        const design = typeof item.designId === "object"
-            ? `${item.designId.designNumber}`
+        const quality = item.qualityId && typeof item.qualityId === "object" ? (item.qualityId as any).fabricName : "Unknown Quality";
+        const design = item.designId && typeof item.designId === "object"
+            ? `${(item.designId as any).designNumber}`
             : "";
 
         if (item.catalogType === "Saree") {
@@ -174,8 +231,8 @@ export function OrderEntryPage() {
     return (
         <div className="space-y-6">
             <PageHeader
-                title="Create Order"
-                subtitle="Add a new customer order with line items"
+                title={isEditMode ? "Edit Order" : "Create Order"}
+                subtitle={isEditMode ? "Modify existing order details" : "Add a new customer order with line items"}
             />
 
             <form onSubmit={handleSubmit}>
@@ -386,7 +443,7 @@ export function OrderEntryPage() {
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={loading || lineItems.length === 0}>
-                                {loading ? "Saving..." : "Create Order"}
+                                {loading ? "Saving..." : (isEditMode ? "Update Order" : "Create Order")}
                             </Button>
                         </div>
                     </CardContent>

@@ -272,8 +272,11 @@ export function ProductionEntryPage() {
     };
 
     const submitProduction = async (resetForNextDesign: boolean = false) => {
+        console.log("submitProduction executing. Reset:", resetForNextDesign);
+        console.log("Form State:", { factoryId, date, stockType, qualityId, designId });
+
         if (!factoryId || !date) {
-            alert("Please fill in required fields");
+            alert(`Please fill in required fields: ${!factoryId ? "Factory " : ""}${!date ? "Date" : ""}`);
             return;
         }
 
@@ -717,7 +720,11 @@ export function ProductionEntryPage() {
                                 Cancel
                             </Button>
                             <Button
-                                type="submit"
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    submitProduction(false);
+                                }}
                                 disabled={loading}
                             >
                                 {loading ? "Saving..." : isEditMode ? "Update Production" : "Save Production"}

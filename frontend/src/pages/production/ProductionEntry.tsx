@@ -358,16 +358,35 @@ export function ProductionEntryPage() {
                 payload.totalSaree = calculateSareeTotalSaree();
                 payload.totalMeters = calculateSareeTotalMeters();
             }
-
             console.log("Validation Passed. Payload:", payload);
             console.log("Initiating API call...");
 
             if (isEditMode) {
+                console.log("Updating production...");
                 await updateProduction(id!, payload);
                 alert("Production updated successfully!");
                 navigate("/production/list");
-                // Create new production
-                await createProduction(payload);
+            } else {
+                console.log("Creating production...");
+
+                // Add Timeout race to detect hangs
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error("Request timed out after 5 seconds")), 5000)
+                );
+
+                try {
+                    const response = await Promise.race([
+                        createProduction(payload),
+                        timeoutPromise
+                    ]);
+                    console.log("API Call Successful. Response:", response);
+                } catch (apiError: any) {
+                    console.error("API Call FAILED:", apiError);
+                    alert(`API Error: ${apiError.message || "Unknown error"}`);
+                    setLoading(false);
+                    return;
+                }
+
                 if (resetForNextDesign) {
                     // Logic to find and select next design
                     let nextDesignId = "";

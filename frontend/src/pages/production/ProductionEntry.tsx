@@ -31,6 +31,7 @@ export function ProductionEntryPage() {
     const [currentMeter, setCurrentMeter] = useState("");
     const takaNoRef = useRef<HTMLInputElement>(null);
     const meterRef = useRef<HTMLInputElement>(null);
+    const ignoreDesignChangeRef = useRef(false);
 
     // Saree fields
     const [qualityId, setQualityId] = useState("");
@@ -70,8 +71,16 @@ export function ProductionEntryPage() {
                 const designIdValue = production.designId && typeof production.designId === "object" ? production.designId.id : production.designId;
 
                 setQualityId(qualityId || "");
+
+                // Suppress the effect that resets matchings when designId changes
+                ignoreDesignChangeRef.current = true;
                 setDesignId(typeof designIdValue === "string" ? designIdValue : "");
-                setMatchingQuantities(production.matchingQuantities || []);
+
+                // Fetch and merge matchings manually
+                if (qualityId && designIdValue) {
+                    await fetchMatchingsForDesign(qualityId, typeof designIdValue === "string" ? designIdValue : "", production.matchingQuantities || []);
+                }
+
                 setCut(production.cut || 0);
             }
         } catch (error) {
@@ -80,6 +89,9 @@ export function ProductionEntryPage() {
             navigate("/production/list");
         } finally {
             setLoading(false);
+            // Ensure ref is reset after a short delay just in case render is slow, 
+            // though effect consumes it synchronously typically.
+            setTimeout(() => { ignoreDesignChangeRef.current = false; }, 500);
         }
     };
 
@@ -99,6 +111,11 @@ export function ProductionEntryPage() {
 
     // Fetch matchings when design changes (Saree only)
     useEffect(() => {
+        if (ignoreDesignChangeRef.current) {
+            ignoreDesignChangeRef.current = false;
+            return;
+        }
+
         if (stockType === "Saree" && qualityId && designId) {
             fetchMatchingsForDesign(qualityId, designId);
         } else {
@@ -135,7 +152,7 @@ export function ProductionEntryPage() {
         }
     };
 
-    const fetchMatchingsForDesign = async (qualityId: string, designId: string) => {
+    const fetchMatchingsForDesign = async (qualityId: string, designId: string, existingQuantities?: MatchingQuantity[]) => {
         try {
             const catalogEntries = await getCatalogByQuality(qualityId);
 
@@ -150,16 +167,30 @@ export function ProductionEntryPage() {
             if (designEntries.length > 0) {
                 // Get unique matchings for this specific design
                 const matchingMap = new Map();
+
+                // Helper to normalize ID
+                const getNormalizedId = (objOrStr: any) => {
+                    if (!objOrStr) return "";
+                    return typeof objOrStr === 'object' ? (objOrStr._id || objOrStr.id) : objOrStr;
+                };
+
                 designEntries.forEach((entry: any) => {
                     if (entry.matchingId) {
                         const matching = typeof entry.matchingId === "object" ? entry.matchingId : null;
                         if (matching) {
                             const matchingIdStr = matching._id || matching.id || matching;
                             if (!matchingMap.has(matchingIdStr)) {
+                                // Check if we have an existing value for this matching
+                                let existingQty = 0;
+                                if (existingQuantities) {
+                                    const found = existingQuantities.find(eq => getNormalizedId(eq.matchingId) === matchingIdStr);
+                                    if (found) existingQty = found.quantity;
+                                }
+
                                 matchingMap.set(matchingIdStr, {
                                     matchingId: matchingIdStr,
                                     matchingName: matching.matchingName || "",
-                                    quantity: 0
+                                    quantity: existingQty
                                 });
                             }
                         }

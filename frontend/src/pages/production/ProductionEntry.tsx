@@ -314,20 +314,54 @@ export function ProductionEntryPage() {
                 await updateProduction(id!, payload);
                 alert("Production updated successfully!");
                 navigate("/production/list");
-            } else {
+                // Create new production
                 await createProduction(payload);
                 if (resetForNextDesign) {
-                    // Reset fields for next design entry
-                    // Keep: Date, Factory, StockType, Quality (takaQualityId / qualityId)
-                    // Reset: Design, Matchings, Cut, Taka Details
-                    setTakaDesignId("");
-                    setTakaDetails([]);
-                    setCurrentTakaNo("");
-                    setCurrentMeter("");
-                    setDesignId("");
-                    setMatchingQuantities([]);
-                    setCut(0);
-                    alert("Saved! Ready for next design.");
+                    // Logic to find and select next design
+                    let nextDesignId = "";
+                    let nextDesignNumber = "";
+                    let hasNext = false;
+
+                    if (stockType === "Taka") {
+                        const currentIndex = takaAvailableDesigns.findIndex(d => (d._id || d.id) === takaDesignId);
+                        if (currentIndex !== -1 && currentIndex < takaAvailableDesigns.length - 1) {
+                            const nextDesign = takaAvailableDesigns[currentIndex + 1];
+                            nextDesignId = nextDesign._id || nextDesign.id;
+                            nextDesignNumber = nextDesign.designNumber;
+                            hasNext = true;
+                        }
+                    } else {
+                        const currentIndex = availableDesigns.findIndex(d => (d._id || d.id) === designId);
+                        if (currentIndex !== -1 && currentIndex < availableDesigns.length - 1) {
+                            const nextDesign = availableDesigns[currentIndex + 1];
+                            nextDesignId = nextDesign._id || nextDesign.id;
+                            nextDesignNumber = nextDesign.designNumber;
+                            hasNext = true;
+                        }
+                    }
+
+                    if (hasNext) {
+                        // Reset fields but set new design
+                        if (stockType === "Taka") {
+                            setTakaDesignId(nextDesignId);
+                            setTakaDetails([]);
+                            setCurrentTakaNo("");
+                            setCurrentMeter("");
+
+                            // Focus back to taka number input
+                            setTimeout(() => {
+                                takaNoRef.current?.focus();
+                            }, 100);
+                        } else {
+                            setDesignId(nextDesignId); // Will trigger fetchMatchingsForDesign via useEffect
+                            setMatchingQuantities([]); // Clear temporarily
+                            setCut(0);
+                        }
+                        alert(`Saved! Switched to next design: ${nextDesignNumber}`);
+                    } else {
+                        alert("Saved! No more designs available for this quality.");
+                        navigate("/production/list");
+                    }
                 } else {
                     navigate("/production/list");
                 }

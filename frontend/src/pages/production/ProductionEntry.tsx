@@ -290,17 +290,22 @@ export function ProductionEntryPage() {
             };
 
             if (stockType === "Taka") {
+                console.log("Validating Taka Mode. Details Count:", takaDetails.length);
+                console.log("Taka Details Data:", takaDetails);
                 if (!takaQualityId) {
+                    console.log("Validation Failed: No Taka Quality");
                     alert("Please select a quality");
                     setLoading(false);
                     return;
                 }
                 if (!takaDesignId) {
+                    console.log("Validation Failed: No Taka Design");
                     alert("Please select a design");
                     setLoading(false);
                     return;
                 }
                 if (takaDetails.length === 0) {
+                    console.log("Validation Failed: No Taka Details");
                     if (currentTakaNo || currentMeter) {
                         alert("You have entered Taka Details but haven't clicked 'ADD'. Please add the taka to the list before saving.");
                     } else {
@@ -314,24 +319,33 @@ export function ProductionEntryPage() {
                 payload.takaDetails = takaDetails;
                 payload.totalMeters = calculateTakaTotalMeters();
             } else {
+                console.log("Validating Saree Mode. MQ Count:", matchingQuantities.length);
+                console.log("MQ Data:", matchingQuantities);
+
                 if (!qualityId) {
+                    console.log("Validation Failed: No Quality");
                     alert("Please select a quality");
                     setLoading(false);
                     return;
                 }
                 if (!designId) {
+                    console.log("Validation Failed: No Design");
                     alert("Please select a design");
                     setLoading(false);
                     return;
                 }
                 if (matchingQuantities.length === 0) {
+                    console.log("Validation Failed: No Matching Quantities");
                     alert("No matching quantities found. Please check your catalog or design.");
                     setLoading(false);
                     return;
                 }
                 // Check if at least one quantity is > 0
                 const activeMatchings = matchingQuantities.filter((mq) => mq.quantity > 0);
+                console.log("Active Matchings (Qty > 0):", activeMatchings.length);
+
                 if (activeMatchings.length === 0) {
+                    console.log("Validation Failed: All quantities are 0");
                     alert("Please enter a quantity for at least one matching.");
                     setLoading(false);
                     return;
@@ -344,6 +358,9 @@ export function ProductionEntryPage() {
                 payload.totalSaree = calculateSareeTotalSaree();
                 payload.totalMeters = calculateSareeTotalMeters();
             }
+
+            console.log("Validation Passed. Payload:", payload);
+            console.log("Initiating API call...");
 
             if (isEditMode) {
                 await updateProduction(id!, payload);
@@ -719,31 +736,31 @@ export function ProductionEntryPage() {
                             >
                                 Cancel
                             </Button>
-                            <button
+                            <Button
                                 type="button"
                                 onClick={(e) => {
                                     e.preventDefault();
-                                    e.stopPropagation(); // Stop bubbling
-                                    // alert("Save Clicked"); // Debug alert
+                                    e.stopPropagation();
                                     submitProduction(false);
                                 }}
-                                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
+                                disabled={loading}
                             >
                                 {loading ? "Saving..." : isEditMode ? "Update Production" : "Save Production"}
-                            </button>
+                            </Button>
                             {!isEditMode && (
-                                <button
+                                <Button
                                     type="button"
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        // alert("Next Clicked"); // Debug alert
                                         submitProduction(true);
                                     }}
-                                    className="inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan/80 focus-visible:ring-offset-2 ring-offset-surface-100 glass-panel hover:bg-surface-200/50 border-border/10 h-11 px-4 bg-gradient-to-r from-neon-cyan to-neon-purple text-white border-0"
+                                    disabled={loading}
+                                    variant="secondary"
+                                    className="bg-gradient-to-r from-neon-cyan to-neon-purple text-white border-0"
                                 >
                                     Add & Next Design
-                                </button>
+                                </Button>
                             )}
                         </div>
                     </CardContent>

@@ -440,7 +440,6 @@ export function ProductionEntryPage() {
                                         <Button
                                             type="button"
                                             variant="secondary"
-                                            size="sm"
                                             onClick={handleAddTaka}
                                         >
                                             ADD
@@ -489,7 +488,7 @@ export function ProductionEntryPage() {
                                                     <button
                                                         type="button"
                                                         onClick={() => handleRemoveTaka(index)}
-                                                        className="text-red-400 hover:text-red-300 text-xl"
+                                                        className="text-red-400 hover:text-red-300 text-xl p-2"
                                                     >
                                                         ×
                                                     </button>

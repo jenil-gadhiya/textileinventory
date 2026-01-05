@@ -48,27 +48,27 @@ export function DashboardPage() {
         <PageHeader title="Dashboard" subtitle="Overview of your inventory and orders." />
 
         {/* Date Filter */}
-        <div className="flex items-center gap-2 bg-surface-200 p-2 rounded-lg border border-border/10">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 bg-surface-200 p-2 rounded-lg border border-border/10 w-full md:w-auto">
+          <div className="flex items-center gap-2 flex-1 min-w-[120px]">
             <span className="text-xs text-muted">From:</span>
             <input
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="bg-transparent text-sm text-body focus:outline-none"
+              className="bg-transparent text-sm text-body focus:outline-none w-full"
             />
           </div>
-          <div className="w-px h-4 bg-border/20"></div>
-          <div className="flex items-center gap-2">
+          <div className="hidden sm:block w-px h-4 bg-border/20"></div>
+          <div className="flex items-center gap-2 flex-1 min-w-[120px]">
             <span className="text-xs text-muted">To:</span>
             <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="bg-transparent text-sm text-body focus:outline-none"
+              className="bg-transparent text-sm text-body focus:outline-none w-full"
             />
           </div>
-          <Button size="sm" onClick={loadStats} className="ml-2">Apply</Button>
+          <Button size="sm" onClick={loadStats} className="ml-2 w-full sm:w-auto">Apply</Button>
         </div>
       </div>
 

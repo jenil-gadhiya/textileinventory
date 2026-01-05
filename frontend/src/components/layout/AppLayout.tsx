@@ -63,7 +63,7 @@ export function AppLayout({ children }: Props) {
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-neon-cyan to-neon-purple" />
           <span className="text-sm font-semibold tracking-wider text-body">TEXTILE OS</span>
         </div>
-        <Button size="sm" variant="ghost" onClick={() => setIsMobileOpen(!isMobileOpen)}>
+        <Button size="md" variant="ghost" onClick={() => setIsMobileOpen(!isMobileOpen)}>
           {isMobileOpen ? (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
           ) : (
@@ -102,7 +102,7 @@ export function AppLayout({ children }: Props) {
               onClick={() => setIsMobileOpen(false)}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition-all",
+                  "flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition-all min-h-[44px]",
                   "hover:bg-surface-200 hover:text-body text-muted",
                   isActive && "bg-surface-200 text-body"
                 )
@@ -125,7 +125,7 @@ export function AppLayout({ children }: Props) {
                 onClick={() => setIsMobileOpen(false)}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition-all",
+                    "flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition-all min-h-[44px]",
                     "hover:bg-surface-200 hover:text-body text-muted",
                     isActive && "bg-surface-200 text-body"
                   )
@@ -143,14 +143,14 @@ export function AppLayout({ children }: Props) {
             <Link
               to="/stock/new"
               onClick={() => setIsMobileOpen(false)}
-              className="flex h-9 items-center justify-start rounded-xl bg-surface-200 px-3 text-sm font-semibold text-body transition hover:scale-[1.01] hover:bg-surface-300"
+              className="flex h-11 items-center justify-start rounded-xl bg-surface-200 px-3 text-sm font-semibold text-body transition hover:scale-[1.01] hover:bg-surface-300"
             >
               ➕ Add Stock
             </Link>
             <Link
               to="/stock/list"
               onClick={() => setIsMobileOpen(false)}
-              className="flex h-9 items-center justify-start rounded-xl px-3 text-sm font-semibold text-muted transition hover:bg-surface-200 hover:text-body"
+              className="flex h-11 items-center justify-start rounded-xl px-3 text-sm font-semibold text-muted transition hover:bg-surface-200 hover:text-body"
             >
               📊 View Stock
             </Link>

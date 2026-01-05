@@ -5,31 +5,56 @@
 @layer base {
   :root {
     /* Light Mode Variables */
-    --color-surface-50: 248 250 252; /* Slate 50 */
-    --color-surface-100: 255 255 255; /* White */
-    --color-surface-200: 241 245 249; /* Slate 100 */
-    --color-surface-300: 226 232 240; /* Slate 200 */
+    --color-surface-50: 248 250 252;
+    /* Slate 50 */
+    --color-surface-100: 255 255 255;
+    /* White */
+    --color-surface-200: 241 245 249;
+    /* Slate 100 */
+    --color-surface-300: 226 232 240;
+    /* Slate 200 */
 
-    --color-text-body: 15 23 42; /* Slate 900 */
-    --color-text-muted: 100 116 139; /* Slate 500 */
-    --color-border: 226 232 240; /* Slate 200 */
+    --color-text-body: 15 23 42;
+    /* Slate 900 */
+    --color-text-muted: 100 116 139;
+    /* Slate 500 */
+    --color-border: 226 232 240;
+    /* Slate 200 */
   }
 
   .dark {
     /* Dark Mode Variables (Originals) */
-    --color-surface-50: 15 23 42; /* #0f172a */
-    --color-surface-100: 17 24 39; /* #111827 */
-    --color-surface-200: 31 41 55; /* #1f2937 */
-    --color-surface-300: 39 50 69; /* #273245 */
+    --color-surface-50: 15 23 42;
+    /* #0f172a */
+    --color-surface-100: 17 24 39;
+    /* #111827 */
+    --color-surface-200: 31 41 55;
+    /* #1f2937 */
+    --color-surface-300: 39 50 69;
+    /* #273245 */
 
-    --color-text-body: 248 250 252; /* Slate 50 */
-    --color-text-muted: 148 163 184; /* Slate 400 */
-    --color-border: 255 255 255; /* White */
+    --color-text-body: 248 250 252;
+    /* Slate 50 */
+    --color-text-muted: 148 163 184;
+    /* Slate 400 */
+    --color-border: 255 255 255;
+    /* White */
   }
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
-  @apply min-h-screen bg-gradient-to-br from-surface-100 via-surface-200 to-surface-100 text-body antialiased;
+  @apply min-h-screen bg-gradient-to-br from-surface-100 via-surface-200 to-surface-100 text-body antialiased overflow-x-hidden;
+  font-size: clamp(14px, 2vw, 16px);
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
 }
 
 .glass-panel {

@@ -287,8 +287,22 @@ export function ProductionEntryPage() {
             };
 
             if (stockType === "Taka") {
-                if (!takaQualityId || !takaDesignId || takaDetails.length === 0) {
-                    alert("Please select quality, design, and add at least one taka detail");
+                if (!takaQualityId) {
+                    alert("Please select a quality");
+                    setLoading(false);
+                    return;
+                }
+                if (!takaDesignId) {
+                    alert("Please select a design");
+                    setLoading(false);
+                    return;
+                }
+                if (takaDetails.length === 0) {
+                    if (currentTakaNo || currentMeter) {
+                        alert("You have entered Taka Details but haven't clicked 'ADD'. Please add the taka to the list before saving.");
+                    } else {
+                        alert("Please add at least one taka detail to the list.");
+                    }
                     setLoading(false);
                     return;
                 }
@@ -297,14 +311,32 @@ export function ProductionEntryPage() {
                 payload.takaDetails = takaDetails;
                 payload.totalMeters = calculateTakaTotalMeters();
             } else {
-                if (!qualityId || !designId || matchingQuantities.length === 0) {
-                    alert("Please select quality and design");
+                if (!qualityId) {
+                    alert("Please select a quality");
                     setLoading(false);
                     return;
                 }
+                if (!designId) {
+                    alert("Please select a design");
+                    setLoading(false);
+                    return;
+                }
+                if (matchingQuantities.length === 0) {
+                    alert("No matching quantities found. Please check your catalog or design.");
+                    setLoading(false);
+                    return;
+                }
+                // Check if at least one quantity is > 0
+                const activeMatchings = matchingQuantities.filter((mq) => mq.quantity > 0);
+                if (activeMatchings.length === 0) {
+                    alert("Please enter a quantity for at least one matching.");
+                    setLoading(false);
+                    return;
+                }
+
                 payload.qualityId = qualityId;
                 payload.designId = designId;
-                payload.matchingQuantities = matchingQuantities.filter((mq) => mq.quantity > 0);
+                payload.matchingQuantities = activeMatchings;
                 payload.cut = cut;
                 payload.totalSaree = calculateSareeTotalSaree();
                 payload.totalMeters = calculateSareeTotalMeters();
@@ -386,7 +418,7 @@ export function ProductionEntryPage() {
                 subtitle={isEditMode ? "Update production entry details" : "Record daily production for Taka or Saree"}
             />
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
                 <Card>
                     <CardContent className="pt-6 space-y-6">
                         {/* Date */}

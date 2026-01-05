@@ -102,7 +102,13 @@ export function OrderListPage() {
                 const itemTotalSarees = item.matchingQuantities?.reduce((sum, mq) => sum + (mq.quantity || 0), 0) || 0;
                 grandTotalSarees += itemTotalSarees;
 
-                item.matchingQuantities?.forEach(mq => {
+                const sortedMatchings = [...(item.matchingQuantities || [])].sort((a, b) => {
+                    const nameA = a.matchingId && typeof a.matchingId === "object" ? a.matchingId.matchingName : "";
+                    const nameB = b.matchingId && typeof b.matchingId === "object" ? b.matchingId.matchingName : "";
+                    return nameA.localeCompare(nameB);
+                });
+
+                sortedMatchings.forEach(mq => {
                     const matching = mq.matchingId && typeof mq.matchingId === "object" ? mq.matchingId.matchingName : "Unknown";
                     // Clean matching name (remove extra spaces if any)
                     const mName = matching.trim().substring(0, 10);

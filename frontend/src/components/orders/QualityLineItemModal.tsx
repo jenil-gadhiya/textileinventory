@@ -17,9 +17,6 @@ interface Props {
 export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Props) {
     const { qualities } = useStockStore();
 
-    // Check if initial fetch should be ignored to prevent overwriting editing data
-    const ignoreFetchRef = useRef(false);
-
     const [catalogType, setCatalogType] = useState<"Saree" | "Taka">("Saree");
     const [filteredQualities, setFilteredQualities] = useState<any[]>([]);
     const [qualityId, setQualityId] = useState("");
@@ -50,9 +47,6 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
     }, [isOpen, editingItem]);
 
     const loadEditingData = (item: OrderLineItem) => {
-        // Prevent next fetch from overwriting data
-        ignoreFetchRef.current = true;
-
         // Handle both _id (from DB) and id (frontend mapped)
         const qId = typeof item.qualityId === "object"
             ? ((item.qualityId as any)._id || item.qualityId.id)
@@ -134,15 +128,13 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
         }
     }, [qualityId]);
 
-    // Fetch matchings when design changes (Saree only)
+    // Clear matchings when design is cleared
     useEffect(() => {
-        if (catalogType === "Saree" && qualityId && designId) {
-            fetchMatchingsForDesign();
-        } else {
+        if (!designId) {
             setMatchingQuantities([]);
             setCut(0);
         }
-    }, [designId, qualityId, catalogType]);
+    }, [designId]);
 
     const fetchDesignsForQuality = async () => {
         try {
@@ -165,34 +157,17 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
         }
     };
 
-    const fetchMatchingsForDesign = async () => {
-        // 1. Check if we should ignore this fetch (Initial load of editing data)
-        if (ignoreFetchRef.current) {
-            ignoreFetchRef.current = false;
-            return;
-        }
+    const fetchMatchingsForDesign = async (targetDesignId: string) => {
+        if (!targetDesignId) return;
 
-        // 2. Check if we should restore from editingItem (Edit Mode)
-        if (editingItem && editingItem.catalogType === catalogType) {
-            const editingDId = typeof editingItem.designId === "object"
-                ? ((editingItem.designId as any)._id || editingItem.designId.id)
-                : editingItem.designId;
-
-            if (editingDId && designId && editingDId.toString() === designId.toString()) {
-                setMatchingQuantities(editingItem.matchingQuantities || []);
-                setCut(editingItem.cut || 0);
-                return;
-            }
-        }
-
-        // 3. Otherwise fetch fresh from catalog
+        // Otherwise fetch fresh from catalog
         try {
             const catalogEntries = await getCatalogByQuality(qualityId);
             const designEntries = catalogEntries.filter((entry: any) => {
                 const entryDesignId = typeof entry.designId === "object"
                     ? (entry.designId._id || entry.designId.id)
                     : entry.designId;
-                return entryDesignId === designId;
+                return entryDesignId === targetDesignId;
             });
 
             if (designEntries.length > 0) {
@@ -219,6 +194,14 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
             }
         } catch (error) {
             console.error("Error fetching matchings:", error);
+        }
+    };
+
+    const handleDesignChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newId = e.target.value;
+        setDesignId(newId);
+        if (newId && catalogType === "Saree") { // Only fetch matchings if in Saree mode
+            fetchMatchingsForDesign(newId);
         }
     };
 
@@ -331,7 +314,12 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
             const nextDesignId = nextDesign._id || nextDesign.id;
 
             setDesignId(nextDesignId);
+            // Fetch matchings for the next design
             if (catalogType === "Saree") {
+                fetchMatchingsForDesign(nextDesignId);
+                // Should clear before fetch returns?
+                // fetchMatchingsForDesign will overwrite anyway.
+                // But good to clear to remove old values instantly.
                 setMatchingQuantities([]);
                 setCut(0);
             } else {
@@ -483,13 +471,13 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
                             <select
                                 id="design"
                                 value={designId}
-                                onChange={(e) => setDesignId(e.target.value)}
+                                onChange={handleDesignChange}
                                 className="flex h-11 w-full rounded-md border border-white/10 bg-surface-200 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
                             >
                                 <option value="">Select Design</option>
                                 {availableDesigns.map((d: any) => (
                                     <option key={d._id || d.id} value={d._id || d.id}>
-                                        {d.designNumber} {d.designName ? `- ${d.designName}` : ""}
+                                        {d.designNumber} {d.designName ? `- ${d.designName} ` : ""}
                                     </option>
                                 ))}
                             </select>
@@ -505,11 +493,11 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
                                     const mId = mq.matchingId as unknown as string;
                                     return (
                                         <div key={mId}>
-                                            <Label htmlFor={`matching-${mId}`}>
+                                            <Label htmlFor={`matching - ${mId} `}>
                                                 {mq.matchingName}
                                             </Label>
                                             <Input
-                                                id={`matching-${mId}`}
+                                                id={`matching - ${mId} `}
                                                 type="number"
                                                 min="0"
                                                 value={mq.quantity}
@@ -573,7 +561,7 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
                             <div>
                                 <Label>Order Value</Label>
                                 <Input
-                                    value={`₹${calculateSareeOrderValue().toFixed(2)}`}
+                                    value={`₹${calculateSareeOrderValue().toFixed(2)} `}
                                     readOnly
                                     className="bg-surface-300 font-semibold"
                                 />
@@ -664,7 +652,7 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
                             <div>
                                 <Label>Order Value</Label>
                                 <Input
-                                    value={`₹${calculateTakaOrderValue().toFixed(2)}`}
+                                    value={`₹${calculateTakaOrderValue().toFixed(2)} `}
                                     readOnly
                                     className="bg-surface-300 font-semibold"
                                 />

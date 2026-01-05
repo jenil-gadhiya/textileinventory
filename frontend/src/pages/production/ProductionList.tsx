@@ -133,33 +133,15 @@ export function ProductionListPage() {
 
         return {
             id: p.id,
+            production: p, // Keep full object for row click
             srNo: index + 1,
-            date: new Date(p.date).toLocaleDateString(), // Format date for display
+            date: new Date(p.date).toLocaleDateString(),
             factory,
             stockType: p.stockType,
             item: p.stockType === "Taka" ? quality : `${quality} - ${design}`,
             totalTaka: p.stockType === "Taka" && p.takaDetails ? p.takaDetails.length : "-",
             totalSaree: p.totalSaree || "-",
             totalMeters: p.totalMeters.toFixed(2),
-            production: p,
-            actions: (
-                <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={(e) => handleEdit(p.id, e)}
-                    >
-                        Edit
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={(e) => handleDelete(p.id, e)}
-                    >
-                        Delete
-                    </Button>
-                </div>
-            )
         };
     });
 
@@ -177,12 +159,12 @@ export function ProductionListPage() {
             : "";
 
         return (
-            <div className="space-y-4 text-body">
+            <div className="space-y-6 text-body">
                 {/* General Info */}
                 <div className="grid grid-cols-2 gap-4 bg-surface-200 p-4 rounded-lg">
                     <div>
                         <p className="text-sm text-muted">Date</p>
-                        <p className="font-semibold">{selectedProduction.date}</p>
+                        <p className="font-semibold">{new Date(selectedProduction.date).toLocaleDateString()}</p>
                     </div>
                     <div>
                         <p className="text-sm text-muted">Factory</p>
@@ -208,9 +190,9 @@ export function ProductionListPage() {
                 {selectedProduction.stockType === "Taka" && selectedProduction.takaDetails && (
                     <div>
                         <h4 className="font-semibold mb-2 text-body">Taka Details</h4>
-                        <div className="border border-border/10 rounded-lg overflow-hidden">
+                        <div className="border border-border/10 rounded-lg overflow-hidden max-h-60 overflow-y-auto">
                             <table className="w-full">
-                                <thead className="bg-surface-200/50">
+                                <thead className="bg-surface-200/50 sticky top-0">
                                     <tr>
                                         <th className="px-4 py-2 text-left text-xs font-semibold uppercase text-muted">Taka No</th>
                                         <th className="px-4 py-2 text-right text-xs font-semibold uppercase text-muted">Meters</th>
@@ -230,7 +212,7 @@ export function ProductionListPage() {
                             <span className="font-semibold">Total Taka:</span>
                             <span className="font-bold">{selectedProduction.takaDetails.length}</span>
                         </div>
-                        <div className="flex justify-between bg-surface-200 p-3 rounded-lg">
+                        <div className="flex justify-between bg-surface-200 p-3 rounded-lg mt-2">
                             <span className="font-semibold">Total Meters:</span>
                             <span className="font-bold">{selectedProduction.totalMeters.toFixed(2)} m</span>
                         </div>
@@ -275,6 +257,33 @@ export function ProductionListPage() {
                         </div>
                     </div>
                 )}
+
+                {/* Actions */}
+                <div className="flex justify-end gap-3 pt-4 border-t border-border/10">
+                    <Button
+                        variant="secondary"
+                        onClick={() => navigate(`/production/edit/${selectedProduction.id}`)}
+                    >
+                        Edit Production
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        onClick={async () => {
+                            if (confirm("Are you sure you want to delete this production entry?")) {
+                                try {
+                                    await deleteProduction(selectedProduction.id);
+                                    setIsDetailModalOpen(false);
+                                    loadProductions();
+                                } catch (error) {
+                                    console.error("Error deleting production:", error);
+                                    alert("Failed to delete production");
+                                }
+                            }
+                        }}
+                    >
+                        Delete Production
+                    </Button>
+                </div>
             </div>
         );
     };
@@ -388,7 +397,6 @@ export function ProductionListPage() {
                             { key: "totalTaka", header: "Total Taka" },
                             { key: "totalSaree", header: "Total Saree" },
                             { key: "totalMeters", header: "Total Meters" },
-                            { key: "actions", header: "Actions", render: (row: any) => row.actions }
                         ]}
                         emptyMessage="No production entries match your filters."
                         onRowClick={(row) => handleRowClick(row.production)}

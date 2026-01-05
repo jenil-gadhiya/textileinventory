@@ -24,12 +24,12 @@ export interface StockPiece {
 }
 
 export async function fetchAvailableStockPieces(
-    qualityId: string,
+    qualityId?: string,
     designId?: string,
     factoryId?: string
 ): Promise<StockPiece[]> {
     const params = new URLSearchParams();
-    params.append("qualityId", qualityId);
+    if (qualityId) params.append("qualityId", qualityId);
     if (designId) params.append("designId", designId);
     if (factoryId) params.append("factoryId", factoryId);
 

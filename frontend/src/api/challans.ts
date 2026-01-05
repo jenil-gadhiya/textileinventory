@@ -14,6 +14,7 @@ export interface ChallanItem {
         challanQuantity: number;
     }>;
     cut?: number;
+    selectedPieces?: any[];
 }
 
 export interface Challan {

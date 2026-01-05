@@ -9,7 +9,30 @@ import { Order } from "@/types/stock";
 import { fetchInventory, InventoryItem } from "@/api/inventory";
 import { fetchAvailableStockPieces, StockPiece } from "@/api/stockPieces";
 
-// ... (ChallanItemData interface remains same)
+interface ChallanItemData {
+    orderLineItemIndex: number;
+    qualityId: string;
+    designId?: string;
+    type: "Taka" | "Saree";
+    orderedQuantity: number;
+    challanQuantity: number;
+    remainingQuantity: number;
+    availableStock: number; // Available stock (Meters for Taka, Pieces for Saree)
+    availableTaka?: number; // Available pieces for Taka
+    quantityType?: string; // "Taka", "Meter", "Saree"
+    selectedPieces?: StockPiece[]; // Selected pieces for Taka dispatch
+    availablePieces?: StockPiece[]; // All available pieces for selection
+    selected?: boolean; // Whether this item is selected for challan
+    matchingQuantities?: Array<{
+        matchingId: string;
+        orderedQuantity: number;
+        challanQuantity: number;
+        remainingQuantity: number;
+        availableStock: number; // Available stock for this matching
+    }>;
+    cut?: number;
+    batchNo?: string;
+}
 
 export function ChallanCreatePage() {
     const navigate = useNavigate();
@@ -51,7 +74,7 @@ export function ChallanCreatePage() {
             // if we filtered them out in loadOrders. So we should fetch this specific order.
             // Assuming we can use the orderId from challan.
             const { http } = await import("@/api/http");
-            const { data: order } = await http.get(`/orders/${challan.orderId._id || challan.orderId}`); // handle object or string
+            const { data: order } = await http.get(`/orders/${(challan.orderId as any)._id || challan.orderId}`); // handle object or string
 
             setSelectedOrder(order);
 
@@ -118,7 +141,7 @@ export function ChallanCreatePage() {
                             takaNo: p.takaNo,
                             meter: p.meter,
                             status: 'Available' // Pretend they are available for valid selection logic
-                        }));
+                        })) as any;
                     }
 
                     // Filter available pieces for dropdown

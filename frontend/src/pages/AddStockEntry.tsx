@@ -30,7 +30,7 @@ const schema = z.object({
   quantityType: z.enum(["Meter", "Kg"]),
   totalAmount: z.number().nonnegative(),
   partyName: z.string().min(1),
-  partyCode: z.string().min(1),
+  partyCode: z.string().optional(),
   brokerName: z.string().min(1),
   status: z.enum(["In", "Out"]),
   entryDate: z.string().min(1),
@@ -118,7 +118,7 @@ export function AddStockEntryPage() {
   const loadParty = (partyName: string) => {
     const p = parties.find((item) => item.partyName === partyName);
     if (p) {
-      setValue("partyCode", p.partyCode);
+      setValue("partyCode", p.partyCode || "");
       setValue("brokerName", p.brokerName ?? "");
     }
   };
@@ -259,7 +259,7 @@ export function AddStockEntryPage() {
               </Select>
             </div>
           </Field>
-          <Field label="Party Code" required error={errors.partyCode?.message}>
+          <Field label="Party Code" error={errors.partyCode?.message}>
             <Input placeholder="Auto-filled" {...register("partyCode")} />
           </Field>
           <Field label="Broker Name" required error={errors.brokerName?.message}>

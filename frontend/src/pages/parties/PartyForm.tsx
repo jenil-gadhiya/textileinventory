@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/PageHeader";
 
 const schema = z.object({
   partyName: z.string().min(1, "Required"),
-  partyCode: z.string().min(1, "Required"),
+  partyCode: z.string().optional(),
   brokerName: z.string().optional(),
   phone: z.string().optional(),
   address: z.string().optional(),
@@ -69,7 +69,7 @@ export function PartyFormPage() {
             <Field label="Party Name" required error={errors.partyName?.message}>
               <Input placeholder="Party name" {...register("partyName")} />
             </Field>
-            <Field label="Party Code" required error={errors.partyCode?.message}>
+            <Field label="Party Code" error={errors.partyCode?.message}>
               <Input placeholder="Code" {...register("partyCode")} />
             </Field>
             <Field label="Broker Name" error={errors.brokerName?.message}>

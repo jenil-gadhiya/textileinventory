@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { defaultOptions } from "./options.js";
+import { generateDailySequenceNumber } from "./Counter.js";
 
 const challanSchema = new mongoose.Schema(
     {
@@ -97,8 +98,7 @@ const challanSchema = new mongoose.Schema(
 // Auto-generate challan number before saving
 challanSchema.pre("save", async function (next) {
     if (this.isNew && !this.challanNo) {
-        const count = await mongoose.model("Challan").countDocuments();
-        this.challanNo = `CH${String(count + 1).padStart(5, "0")}`;
+        this.challanNo = await generateDailySequenceNumber("challan");
     }
     next();
 });

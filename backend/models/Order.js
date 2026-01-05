@@ -1,23 +1,8 @@
 import mongoose from "mongoose";
 import { defaultOptions } from "./options.js";
+import { generateDailySequenceNumber } from "./Counter.js";
 
-// Counter schema for auto-incrementing order numbers
-const counterSchema = new mongoose.Schema({
-    _id: { type: String, required: true },
-    seq: { type: Number, default: 0 }
-});
 
-const Counter = mongoose.model("Counter", counterSchema);
-
-// Helper function to get next order number
-async function getNextOrderNumber() {
-    const counter = await Counter.findByIdAndUpdate(
-        { _id: "orderNo" },
-        { $inc: { seq: 1 } },
-        { new: true, upsert: true }
-    );
-    return `ORD-${String(counter.seq).padStart(5, "0")}`;
-}
 
 // Matching quantity sub-schema (for Saree mode)
 const matchingQuantitySchema = new mongoose.Schema({
@@ -72,7 +57,7 @@ const orderSchema = new mongoose.Schema(
 // Pre-save hook to generate order number
 orderSchema.pre("save", async function (next) {
     if (this.isNew && !this.orderNo) {
-        this.orderNo = await getNextOrderNumber();
+        this.orderNo = await generateDailySequenceNumber("order");
     }
     next();
 });

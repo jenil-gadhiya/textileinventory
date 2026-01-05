@@ -15,7 +15,7 @@ export interface Machine {
 export interface Party {
   id: string;
   partyName: string;
-  partyCode: string;
+  partyCode?: string;
   brokerName?: string;
   phone?: string;
   gstNo?: string;
@@ -104,7 +104,7 @@ export interface StockEntry {
   totalAmount: number;
   quantityType: QuantityType;
   partyName: string;
-  partyCode: string;
+  partyCode?: string;
   brokerName: string;
   status: StockStatus;
   entryDate: string;

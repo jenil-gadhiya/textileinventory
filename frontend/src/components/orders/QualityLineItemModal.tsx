@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,9 @@ interface Props {
 
 export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Props) {
     const { qualities } = useStockStore();
+
+    // Check if initial fetch should be ignored to prevent overwriting editing data
+    const ignoreFetchRef = useRef(false);
 
     const [catalogType, setCatalogType] = useState<"Saree" | "Taka">("Saree");
     const [filteredQualities, setFilteredQualities] = useState<any[]>([]);
@@ -47,6 +50,9 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
     }, [isOpen, editingItem]);
 
     const loadEditingData = (item: OrderLineItem) => {
+        // Prevent next fetch from overwriting data
+        ignoreFetchRef.current = true;
+
         // Handle both _id (from DB) and id (frontend mapped)
         const qId = typeof item.qualityId === "object"
             ? ((item.qualityId as any)._id || item.qualityId.id)
@@ -160,7 +166,13 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
     };
 
     const fetchMatchingsForDesign = async () => {
-        // 1. Check if we should restore from editingItem (Edit Mode)
+        // 1. Check if we should ignore this fetch (Initial load of editing data)
+        if (ignoreFetchRef.current) {
+            ignoreFetchRef.current = false;
+            return;
+        }
+
+        // 2. Check if we should restore from editingItem (Edit Mode)
         if (editingItem && editingItem.catalogType === catalogType) {
             const editingDId = typeof editingItem.designId === "object"
                 ? ((editingItem.designId as any)._id || editingItem.designId.id)
@@ -173,7 +185,7 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
             }
         }
 
-        // 2. Otherwise fetch fresh from catalog
+        // 3. Otherwise fetch fresh from catalog
         try {
             const catalogEntries = await getCatalogByQuality(qualityId);
             const designEntries = catalogEntries.filter((entry: any) => {

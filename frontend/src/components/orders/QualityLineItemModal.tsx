@@ -469,7 +469,7 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
                             id="quality"
                             value={qualityId}
                             onChange={(e) => setQualityId(e.target.value)}
-                            className="flex h-11 w-full rounded-md border border-white/10 bg-surface-200 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
+                            className="flex h-11 w-full rounded-md border border-slate-200 dark:border-white/10 bg-surface-200 px-3 py-2 text-sm text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
                         >
                             <option value="">Select Quality</option>
                             {filteredQualities.map((q) => (
@@ -493,7 +493,7 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
                                 id="design"
                                 value={designId}
                                 onChange={handleDesignChange}
-                                className="flex h-11 w-full rounded-md border border-white/10 bg-surface-200 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
+                                className="flex h-11 w-full rounded-md border border-slate-200 dark:border-white/10 bg-surface-200 px-3 py-2 text-sm text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
                             >
                                 <option value="">Select Design</option>
                                 {availableDesigns.map((d: any) => (

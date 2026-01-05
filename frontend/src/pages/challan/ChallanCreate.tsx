@@ -615,7 +615,7 @@ export function ChallanCreatePage() {
                     {selectedOrder && (
                         <>
                             {/* Challan Details */}
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-muted mb-2">
                                         Challan Date
@@ -699,7 +699,7 @@ export function ChallanCreatePage() {
 
                                                     {item.type === "Taka" ? (
                                                         <>
-                                                            <div className="grid grid-cols-5 gap-4">
+                                                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                                                                 <div>
                                                                     <label className="block text-xs text-muted">
                                                                         Ordered
@@ -883,7 +883,7 @@ export function ChallanCreatePage() {
                                                                 return (
                                                                     <div
                                                                         key={mqIdx}
-                                                                        className="grid grid-cols-5 gap-4 items-center"
+                                                                        className="grid grid-cols-2 md:grid-cols-5 gap-4 items-center"
                                                                     >
                                                                         <div className="text-body">{name}</div>
                                                                         <div>

@@ -367,54 +367,98 @@ export function OrderEntryPage() {
 
                         {/* Line Items Table */}
                         {lineItems.length > 0 && (
-                            <div className="border border-slate-200 dark:border-white/10 rounded-lg overflow-hidden">
-                                <table className="w-full">
-                                    <thead className="bg-surface-100">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-muted">Quality</th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-muted">Design</th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-muted">Details</th>
-                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-muted">Value</th>
-                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-muted">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-200 dark:divide-white/10">
-                                        {lineItems.map((item, index) => {
-                                            const display = getLineItemDisplay(item);
-                                            return (
-                                                <tr key={index} className="hover:bg-surface-100">
-                                                    <td className="px-4 py-3 text-sm text-body">{display.quality}</td>
-                                                    <td className="px-4 py-3 text-sm text-body">{display.design}</td>
-                                                    <td className="px-4 py-3 text-sm text-body">{display.details}</td>
-                                                    <td className="px-4 py-3 text-sm text-right font-semibold text-body">
-                                                        {display.value}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-right">
-                                                        <div className="flex gap-2 justify-end">
-                                                            <Button
-                                                                type="button"
-                                                                size="sm"
-                                                                variant="secondary"
-                                                                onClick={() => handleEditLineItem(index)}
-                                                            >
-                                                                Edit
-                                                            </Button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleRemoveLineItem(index)}
-                                                                className="text-red-400 hover:text-red-300 text-xl px-2"
-                                                            >
-                                                                ×
-                                                            </button>
-                                                        </div>
-                                                    </td>
+                            <>
+                                {/* Desktop Table */}
+                                <div className="hidden md:block border border-slate-200 dark:border-white/10 rounded-lg overflow-hidden px-0">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full">
+                                            <thead className="bg-surface-100">
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-muted">Quality</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-muted">Design</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-muted">Details</th>
+                                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-muted">Value</th>
+                                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-muted">Actions</th>
                                                 </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-200 dark:divide-white/10">
+                                                {lineItems.map((item, index) => {
+                                                    const display = getLineItemDisplay(item);
+                                                    return (
+                                                        <tr key={index} className="hover:bg-surface-100">
+                                                            <td className="px-4 py-3 text-sm text-body">{display.quality}</td>
+                                                            <td className="px-4 py-3 text-sm text-body">{display.design}</td>
+                                                            <td className="px-4 py-3 text-sm text-body">{display.details}</td>
+                                                            <td className="px-4 py-3 text-sm text-right font-semibold text-body">
+                                                                {display.value}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right">
+                                                                <div className="flex gap-2 justify-end">
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="sm"
+                                                                        variant="secondary"
+                                                                        onClick={() => handleEditLineItem(index)}
+                                                                    >
+                                                                        Edit
+                                                                    </Button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemoveLineItem(index)}
+                                                                        className="text-red-400 hover:text-red-300 text-xl px-2"
+                                                                    >
+                                                                        ×
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* Mobile Cards */}
+                                <div className="md:hidden space-y-4">
+                                    {lineItems.map((item, index) => {
+                                        const display = getLineItemDisplay(item);
+                                        return (
+                                            <div key={index} className="bg-surface-200/50 rounded-lg p-4 border border-border/10 space-y-2 relative">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveLineItem(index)}
+                                                    className="absolute top-2 right-2 text-red-400 hover:text-red-300 p-2"
+                                                >
+                                                    ×
+                                                </button>
+
+                                                <div className="pr-8">
+                                                    <h4 className="font-semibold text-body">{display.quality}</h4>
+                                                    <p className="text-sm text-muted">{display.design}</p>
+                                                </div>
+
+                                                <div className="pt-2 border-t border-border/10">
+                                                    <p className="text-sm text-body">{display.details}</p>
+                                                    <div className="flex justify-between items-center mt-2">
+                                                        <div className="font-semibold text-neon-cyan">{display.value}</div>
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="secondary"
+                                                            onClick={() => handleEditLineItem(index)}
+                                                        >
+                                                            Edit
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )
+                        }
 
                         {lineItems.length === 0 && (
                             <p className="text-center text-slate-400 py-8">

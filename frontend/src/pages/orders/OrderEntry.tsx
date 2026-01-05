@@ -371,11 +371,11 @@ export function OrderEntryPage() {
                                 <table className="w-full">
                                     <thead className="bg-surface-100">
                                         <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Quality</th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Design</th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase">Details</th>
-                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase">Value</th>
-                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase">Actions</th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-muted">Quality</th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-muted">Design</th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-muted">Details</th>
+                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-muted">Value</th>
+                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-muted">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-200 dark:divide-white/10">
@@ -383,10 +383,10 @@ export function OrderEntryPage() {
                                             const display = getLineItemDisplay(item);
                                             return (
                                                 <tr key={index} className="hover:bg-surface-100">
-                                                    <td className="px-4 py-3 text-sm">{display.quality}</td>
-                                                    <td className="px-4 py-3 text-sm">{display.design}</td>
-                                                    <td className="px-4 py-3 text-sm">{display.details}</td>
-                                                    <td className="px-4 py-3 text-sm text-right font-semibold">
+                                                    <td className="px-4 py-3 text-sm text-body">{display.quality}</td>
+                                                    <td className="px-4 py-3 text-sm text-body">{display.design}</td>
+                                                    <td className="px-4 py-3 text-sm text-body">{display.details}</td>
+                                                    <td className="px-4 py-3 text-sm text-right font-semibold text-body">
                                                         {display.value}
                                                     </td>
                                                     <td className="px-4 py-3 text-right">

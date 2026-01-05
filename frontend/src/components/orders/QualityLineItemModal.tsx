@@ -128,14 +128,6 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
         }
     }, [qualityId]);
 
-    // Clear matchings when design is cleared
-    useEffect(() => {
-        if (!designId) {
-            setMatchingQuantities([]);
-            setCut(0);
-        }
-    }, [designId]);
-
     const fetchDesignsForQuality = async () => {
         try {
             const catalogEntries = await getCatalogByQuality(qualityId);
@@ -207,16 +199,29 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
 
                 setMatchingQuantities(Array.from(matchingMap.values()));
                 setCut(designEntries[0].cut || 0);
+            } else {
+                // If no entries found (and not editing restored), clear data
+                setMatchingQuantities([]);
+                setCut(0);
             }
         } catch (error) {
             console.error("Error fetching matchings:", error);
+            // On error, better to clear or keep? Clear to be safe.
+            setMatchingQuantities([]);
         }
     };
 
     const handleDesignChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newId = e.target.value;
         setDesignId(newId);
-        if (newId && catalogType === "Saree") { // Only fetch matchings if in Saree mode
+
+        if (!newId) {
+            setMatchingQuantities([]);
+            setCut(0);
+            return;
+        }
+
+        if (catalogType === "Saree") { // Only fetch matchings if in Saree mode
             fetchMatchingsForDesign(newId);
         }
     };

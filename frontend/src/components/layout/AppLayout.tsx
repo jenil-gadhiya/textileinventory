@@ -56,7 +56,7 @@ export function AppLayout({ children }: Props) {
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-surface-100 via-surface-200 to-surface-100">
+    <div className="flex h-screen bg-gradient-to-br from-surface-100 via-surface-200 to-surface-100 overflow-hidden">
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between border-b border-border/10 bg-surface-100/80 px-4 py-3 backdrop-blur-md">
         <div className="flex items-center gap-2">
@@ -83,7 +83,7 @@ export function AppLayout({ children }: Props) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col gap-6 border-r border-border/10 bg-surface-100/95 px-6 py-8 backdrop-blur-2xl transition-transform duration-300 lg:static lg:translate-x-0 lg:bg-surface-100/50",
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col gap-6 border-r border-border/10 bg-surface-100/95 px-6 py-8 backdrop-blur-2xl transition-transform duration-300 lg:translate-x-0 lg:bg-surface-100/50 overflow-y-auto",
           isMobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -137,28 +137,10 @@ export function AppLayout({ children }: Props) {
             ))}
           </nav>
         </div>
-        <div className="mt-auto space-y-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">Quick Actions</p>
-          <div className="flex flex-col gap-2">
-            <Link
-              to="/stock/new"
-              onClick={() => setIsMobileOpen(false)}
-              className="flex h-11 items-center justify-start rounded-xl bg-surface-200 px-3 text-sm font-semibold text-body transition hover:scale-[1.01] hover:bg-surface-300"
-            >
-              ➕ Add Stock
-            </Link>
-            <Link
-              to="/stock/list"
-              onClick={() => setIsMobileOpen(false)}
-              className="flex h-11 items-center justify-start rounded-xl px-3 text-sm font-semibold text-muted transition hover:bg-surface-200 hover:text-body"
-            >
-              📊 View Stock
-            </Link>
-          </div>
-        </div>
+        <div className="mt-auto"></div>
       </aside>
 
-      <main className="flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10 mt-14 lg:mt-0">
+      <main className="flex-1 h-full overflow-y-auto px-4 py-6 sm:px-6 lg:px-10 lg:py-10 mt-14 lg:mt-0 lg:ml-64">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}

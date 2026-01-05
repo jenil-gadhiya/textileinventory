@@ -719,26 +719,31 @@ export function ProductionEntryPage() {
                             >
                                 Cancel
                             </Button>
-                            <Button
+                            <button
                                 type="button"
                                 onClick={(e) => {
                                     e.preventDefault();
+                                    e.stopPropagation(); // Stop bubbling
+                                    // alert("Save Clicked"); // Debug alert
                                     submitProduction(false);
                                 }}
-                                disabled={loading}
+                                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2"
                             >
                                 {loading ? "Saving..." : isEditMode ? "Update Production" : "Save Production"}
-                            </Button>
+                            </button>
                             {!isEditMode && (
-                                <Button
+                                <button
                                     type="button"
-                                    onClick={() => submitProduction(true)} // true = reset for next design
-                                    disabled={loading}
-                                    variant="secondary"
-                                    className="bg-gradient-to-r from-neon-cyan to-neon-purple text-white border-0"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        // alert("Next Clicked"); // Debug alert
+                                        submitProduction(true);
+                                    }}
+                                    className="inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan/80 focus-visible:ring-offset-2 ring-offset-surface-100 glass-panel hover:bg-surface-200/50 border-border/10 h-11 px-4 bg-gradient-to-r from-neon-cyan to-neon-purple text-white border-0"
                                 >
                                     Add & Next Design
-                                </Button>
+                                </button>
                             )}
                         </div>
                     </CardContent>

@@ -271,9 +271,7 @@ export function ProductionEntryPage() {
         return calculateSareeTotalSaree() * cut;
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
+    const submitProduction = async (resetForNextDesign: boolean = false) => {
         if (!factoryId || !date) {
             alert("Please fill in required fields");
             return;
@@ -291,6 +289,7 @@ export function ProductionEntryPage() {
             if (stockType === "Taka") {
                 if (!takaQualityId || !takaDesignId || takaDetails.length === 0) {
                     alert("Please select quality, design, and add at least one taka detail");
+                    setLoading(false);
                     return;
                 }
                 payload.qualityId = takaQualityId;
@@ -300,6 +299,7 @@ export function ProductionEntryPage() {
             } else {
                 if (!qualityId || !designId || matchingQuantities.length === 0) {
                     alert("Please select quality and design");
+                    setLoading(false);
                     return;
                 }
                 payload.qualityId = qualityId;
@@ -311,21 +311,38 @@ export function ProductionEntryPage() {
             }
 
             if (isEditMode) {
-                // Update existing production
                 await updateProduction(id!, payload);
                 alert("Production updated successfully!");
+                navigate("/production/list");
             } else {
-                // Create new production
                 await createProduction(payload);
+                if (resetForNextDesign) {
+                    // Reset fields for next design entry
+                    // Keep: Date, Factory, StockType, Quality (takaQualityId / qualityId)
+                    // Reset: Design, Matchings, Cut, Taka Details
+                    setTakaDesignId("");
+                    setTakaDetails([]);
+                    setCurrentTakaNo("");
+                    setCurrentMeter("");
+                    setDesignId("");
+                    setMatchingQuantities([]);
+                    setCut(0);
+                    alert("Saved! Ready for next design.");
+                } else {
+                    navigate("/production/list");
+                }
             }
-
-            navigate("/production/list");
         } catch (error) {
             console.error(`Error ${isEditMode ? "updating" : "creating"} production:`, error);
             alert(`Failed to ${isEditMode ? "update" : "create"} production entry`);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await submitProduction(false);
     };
 
     return (
@@ -633,9 +650,23 @@ export function ProductionEntryPage() {
                             >
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={loading}>
+                            <Button
+                                type="submit"
+                                disabled={loading}
+                            >
                                 {loading ? "Saving..." : isEditMode ? "Update Production" : "Save Production"}
                             </Button>
+                            {!isEditMode && (
+                                <Button
+                                    type="button"
+                                    onClick={() => submitProduction(true)} // true = reset for next design
+                                    disabled={loading}
+                                    variant="secondary"
+                                    className="bg-gradient-to-r from-neon-cyan to-neon-purple text-white border-0"
+                                >
+                                    Add & Next Design
+                                </Button>
+                            )}
                         </div>
                     </CardContent>
                 </Card>

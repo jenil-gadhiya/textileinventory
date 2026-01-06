@@ -100,7 +100,7 @@ export async function validateStockAvailability(lineItems, session) {
     const insufficientItems = [];
 
     for (const item of lineItems) {
-        const type = item.quantityType || item.catalogType;
+        const type = (item.catalogType === "Taka" || item.quantityType === "Taka" || item.quantityType === "Meter") ? "Taka" : "Saree";
 
         if (type === "Taka") {
             // Validate Taka stock
@@ -229,7 +229,7 @@ export async function updateInventoryFromProduction(
 export async function reserveInventoryForOrder(lineItems, session = null) {
     const METERS_PER_TAKA = 120;
     for (const item of lineItems) {
-        const type = item.quantityType || item.catalogType;
+        const type = (item.catalogType === "Taka" || item.quantityType === "Taka" || item.quantityType === "Meter") ? "Taka" : "Saree";
 
         if (type === "Taka") {
             // Calculate quantities
@@ -496,7 +496,7 @@ export const recalculateInventory = async (req, res, next) => {
         // 5. Process Orders
         for (const o of orders) {
             for (const item of o.lineItems) {
-                const type = item.quantityType || item.catalogType;
+                const type = (item.catalogType === "Taka" || item.quantityType === "Taka" || item.quantityType === "Meter") ? "Taka" : "Saree";
                 let pendingQty = 0;
 
                 if (type === "Taka") {

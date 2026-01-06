@@ -111,7 +111,7 @@ async function reverseInventoryReservation(lineItems, session) {
     const METERS_PER_TAKA = 120;
 
     for (const item of lineItems) {
-        const type = item.quantityType || item.catalogType;
+        const type = (item.catalogType === "Taka" || item.quantityType === "Taka" || item.quantityType === "Meter") ? "Taka" : "Saree";
 
         if (type === "Taka") {
             // Calculate quantities to reverse

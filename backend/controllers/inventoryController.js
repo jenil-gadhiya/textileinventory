@@ -435,16 +435,34 @@ export const recalculateInventory = async (req, res, next) => {
                 if (type === "Taka") {
                     let matchingCandidates = baseValues.sort((a, b) => b.calculated.totalMetersProduced - a.calculated.totalMetersProduced);
 
+                    // Total amount we need to deduct for this item line
+                    const totalChallanMeters = item.challanQuantity || 0;
+                    const totalChallanPieces = item.selectedPieces ? item.selectedPieces.length : 0;
+
                     for (const cand of matchingCandidates) {
                         if (toDeduct <= 0) break;
+
+                        // We deduct from 'Produced' because Produced represents "Stock on Hand" in this model
                         const available = cand.calculated.totalMetersProduced;
                         const taking = Math.min(available, toDeduct);
+
+                        let piecesTaking = 0;
+                        if (toDeductTaka > 0) {
+                            if (taking >= toDeduct - 0.01) {
+                                // Taking the remainder -> take all remaining pieces
+                                piecesTaking = toDeductTaka;
+                            } else {
+                                // Proportional
+                                const ratio = totalChallanMeters > 0 ? (taking / totalChallanMeters) : 0;
+                                piecesTaking = Math.round(ratio * totalChallanPieces);
+                                piecesTaking = Math.min(piecesTaking, toDeductTaka); // Clamp
+                            }
+                        }
+
                         if (taking > 0) {
                             cand.calculated.totalMetersProduced -= taking;
-                            const piecesTaking = (toDeductTaka > 0 && item.challanQuantity > 0)
-                                ? Math.ceil((taking / item.challanQuantity) * toDeductTaka)
-                                : 0;
                             cand.calculated.totalTakaProduced -= piecesTaking;
+
                             toDeduct -= taking;
                             toDeductTaka -= piecesTaking;
                         }

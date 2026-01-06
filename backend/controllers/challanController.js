@@ -480,7 +480,7 @@ export const deleteChallan = async (req, res, next) => {
                 for (const piece of item.selectedPieces) {
                     await StockPiece.findByIdAndUpdate(
                         piece.stockPieceId,
-                        { status: "Available" },
+                        { status: "Available", challanId: null },
                         { session }
                     );
                 }

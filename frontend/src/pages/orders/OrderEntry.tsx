@@ -128,6 +128,11 @@ export function OrderEntryPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        if (!factoryId) {
+            alert("Please select a factory");
+            return;
+        }
+
         if (lineItems.length === 0) {
             alert("Please add at least one line item");
             return;
@@ -270,14 +275,15 @@ export function OrderEntryPage() {
                             </div>
 
                             <div>
-                                <Label htmlFor="factory">Factory</Label>
+                                <Label htmlFor="factory">Factory*</Label>
                                 <select
                                     id="factory"
                                     value={factoryId}
                                     onChange={(e) => setFactoryId(e.target.value)}
                                     className="flex h-11 w-full rounded-md border border-slate-200 dark:border-white/10 bg-surface-200 px-3 py-2 text-sm text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
+                                    required
                                 >
-                                    <option value="">Select Factory (Optional)</option>
+                                    <option value="">Select Factory</option>
                                     {factories.map((f) => (
                                         <option key={f.id} value={f.id}>
                                             {f.factoryName}

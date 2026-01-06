@@ -19,6 +19,7 @@ export function OrderListPage() {
     const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "completed">("all");
     const [qualityFilters, setQualityFilters] = useState<string[]>([]);
     const [partyFilters, setPartyFilters] = useState<string[]>([]);
+    const [factoryFilters, setFactoryFilters] = useState<string[]>([]);
     const [brokerFilters, setBrokerFilters] = useState<string[]>([]);
 
     useEffect(() => {
@@ -162,7 +163,15 @@ export function OrderListPage() {
         new Map(
             orders
                 .filter(o => o.partyId && typeof o.partyId === "object")
-                .map(o => [(o.partyId as any).id, o.partyId])
+                .map(o => [(o.partyId as any).id || (o.partyId as any)._id, o.partyId])
+        ).values()
+    );
+
+    const allFactories = Array.from(
+        new Map(
+            orders
+                .filter(o => o.factoryId && typeof o.factoryId === "object")
+                .map(o => [(o.factoryId as any).id || (o.factoryId as any)._id, o.factoryId])
         ).values()
     );
 
@@ -193,9 +202,17 @@ export function OrderListPage() {
         // Party filter
         if (partyFilters.length > 0) {
             const partyId = order.partyId && typeof order.partyId === "object"
-                ? order.partyId.id
+                ? (order.partyId as any).id || (order.partyId as any)._id
                 : order.partyId;
             if (!partyFilters.includes(partyId as string)) return false;
+        }
+
+        // Factory filter
+        if (factoryFilters.length > 0) {
+            const factoryId = order.factoryId && typeof order.factoryId === "object"
+                ? (order.factoryId as any).id || (order.factoryId as any)._id
+                : order.factoryId;
+            if (!factoryFilters.includes(factoryId as string)) return false;
         }
 
         // Broker filter
@@ -213,14 +230,16 @@ export function OrderListPage() {
         setStatusFilter("all");
         setQualityFilters([]);
         setPartyFilters([]);
+        setFactoryFilters([]);
         setBrokerFilters([]);
     };
 
     const hasActiveFilters = statusFilter !== "all" || qualityFilters.length > 0 ||
-        partyFilters.length > 0 || brokerFilters.length > 0;
+        partyFilters.length > 0 || factoryFilters.length > 0 || brokerFilters.length > 0;
 
     const tableData = filteredOrders.map((order) => {
         const party = order.partyId && typeof order.partyId === "object" ? order.partyId.partyName : "";
+        const factory = order.factoryId && typeof order.factoryId === "object" ? (order.factoryId as any).factoryName : "-";
         const broker = order.brokerId && typeof order.brokerId === "object" ? order.brokerId.brokerName : "-";
         const salesman = order.salesmanId && typeof order.salesmanId === "object" ? (order.salesmanId as any).salesmanName : "";
 
@@ -229,6 +248,7 @@ export function OrderListPage() {
             orderNo: order.orderNo,
             date: order.date,
             party,
+            factory,
             broker,
             salesman,
             status: order.status || "pending",
@@ -603,6 +623,30 @@ export function OrderListPage() {
                                     <p className="text-xs text-slate-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
                                 </div>
 
+                                {/* Factory Filter */}
+                                <div>
+                                    <label className="block text-xs text-muted mb-2">
+                                        Factory {factoryFilters.length > 0 && `(${factoryFilters.length})`}
+                                    </label>
+                                    <select
+                                        multiple
+                                        value={factoryFilters}
+                                        onChange={(e) => {
+                                            const values = Array.from(e.target.selectedOptions, opt => opt.value);
+                                            setFactoryFilters(values);
+                                        }}
+                                        className="w-full bg-surface-200 border border-border/10 rounded px-3 py-1.5 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary"
+                                        size={4}
+                                    >
+                                        {allFactories.map((factory) => (
+                                            <option key={(factory as any).id || (factory as any)._id} value={(factory as any).id || (factory as any)._id}>
+                                                {(factory as any).factoryName}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-xs text-slate-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
+                                </div>
+
                                 {/* Broker/Salesman Filter */}
                                 <div>
                                     <label className="block text-xs text-muted mb-2">
@@ -649,6 +693,12 @@ export function OrderListPage() {
                                             <button onClick={() => setPartyFilters([])} className="hover:text-red-400">×</button>
                                         </span>
                                     )}
+                                    {factoryFilters.length > 0 && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-surface-200 rounded text-xs">
+                                            Factory: <strong>{factoryFilters.length} selected</strong>
+                                            <button onClick={() => setFactoryFilters([])} className="hover:text-red-400">×</button>
+                                        </span>
+                                    )}
                                     {brokerFilters.length > 0 && (
                                         <span className="inline-flex items-center gap-1 px-2 py-1 bg-surface-200 rounded text-xs">
                                             Salesman: <strong>{brokerFilters.length} selected</strong>
@@ -666,6 +716,7 @@ export function OrderListPage() {
                                 { key: "date", header: "Date" },
                                 { key: "orderNo", header: "Order No" },
                                 { key: "party", header: "Party" },
+                                { key: "factory", header: "Factory" },
                                 { key: "salesman", header: "Salesman" },
                                 { key: "status", header: "Status" },
                                 { key: "actions", header: "Actions", render: (row: any) => row.actions }

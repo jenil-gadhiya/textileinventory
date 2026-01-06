@@ -301,8 +301,8 @@ export const deleteChallan = async (req, res, next) => {
 
             // Recalculate dispatch status
             const allDispatched = order.lineItems.every(item => {
-                const type = item.quantityType || item.catalogType;
-                if (type === "Taka") {
+                const type = item.catalogType || item.quantityType;
+                if (type === "Taka" || type === "Meter") {
                     return item.dispatchedQuantity >= item.quantity;
                 } else {
                     return item.matchingQuantities.every(
@@ -312,8 +312,8 @@ export const deleteChallan = async (req, res, next) => {
             });
 
             const anyDispatched = order.lineItems.some(item => {
-                const type = item.quantityType || item.catalogType;
-                if (type === "Taka") {
+                const type = item.catalogType || item.quantityType;
+                if (type === "Taka" || type === "Meter") {
                     return item.dispatchedQuantity > 0;
                 } else {
                     return item.matchingQuantities.some(mq => mq.dispatchedQuantity > 0);
@@ -533,9 +533,9 @@ async function updateOrderDispatchStatus(orderId, challanItems) {
 
     // Calculate overall dispatch status
     const allDispatched = order.lineItems.every((item) => {
-        const type = item.quantityType || item.catalogType;
+        const type = item.catalogType || item.quantityType;
 
-        if (type === "Taka") {
+        if (type === "Taka" || type === "Meter") {
             return item.dispatchedQuantity >= item.quantity;
         } else {
             return item.matchingQuantities.every(

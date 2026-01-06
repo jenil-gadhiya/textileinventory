@@ -70,13 +70,23 @@ export function ChallanCreatePage() {
                 fetchAvailableStockPieces()
             ]);
 
-            // We need the order details. If 'orders' is populated we can find it, but it might not include "Completed" orders
-            // if we filtered them out in loadOrders. So we should fetch this specific order.
-            // Assuming we can use the orderId from challan.
+            // Safe Order ID extraction
+            const coId = challan.orderId;
+            const safeOrderId = (coId && typeof coId === 'object' && '_id' in coId)
+                ? (coId as any)._id
+                : coId;
+
+            if (!safeOrderId) throw new Error("Challan is missing valid Order ID");
+
             const { http } = await import("@/api/http");
-            const { data: order } = await http.get(`/orders/${(challan.orderId as any)._id || challan.orderId}`); // handle object or string
+            const { data: order } = await http.get(`/orders/${safeOrderId}`);
+
+            if (!order) throw new Error("Order not found");
 
             setSelectedOrder(order);
+
+            // Helper for ID extraction
+            const getObjId = (obj: any) => obj ? (obj._id || obj.id || obj) : null;
 
             // Map items
             const items: ChallanItemData[] = await Promise.all(order.lineItems.map(async (lineItem: any, index: number) => {
@@ -85,11 +95,14 @@ export function ChallanCreatePage() {
                 // Find matching item in challan
                 const challanItem = challan.items.find((ci: any) => ci.orderLineItemIndex === index);
 
+                const qId = getObjId(lineItem.qualityId);
+                const dId = getObjId(lineItem.designId);
+
                 // Base structure
                 const itemData: ChallanItemData = {
                     orderLineItemIndex: index,
-                    qualityId: typeof lineItem.qualityId === 'object' ? lineItem.qualityId._id : lineItem.qualityId,
-                    designId: typeof lineItem.designId === 'object' ? lineItem.designId._id : lineItem.designId,
+                    qualityId: qId,
+                    designId: dId,
                     type: type as "Taka" | "Saree",
                     orderedQuantity: type === "Taka"
                         ? lineItem.quantity
@@ -101,27 +114,15 @@ export function ChallanCreatePage() {
                     cut: lineItem.cut
                 };
 
-                // Calculate remaining: (Ordered - Dispatched) + (Current Challan Quantity if editing)
-                // Note: The order.dispatchedQuantity ALREADY includes this challan's amount.
-                // So Remaining = (Ordered - Dispatched) + CurrentChallanAmount
-                // Wait, logic in creating page is: Remaining = Ordered - Dispatched.
-                // But here, since we are editing, "Dispatched" includes what we are editing.
-                // So "True Remaining for this Edit" = (Ordered - Dispatched) + CurrentChallanAmount.
-                // Example: Ordered 100. Challan has 20. Total Dispatched = 20. App says remaining = 80.
-                // But in this form, we want to show we are editing the 20.
-                // If we reduce it to 10, remaining becomes 90.
-
                 if (type === "Taka") {
                     const dispatched = lineItem.dispatchedQuantity || 0;
-                    // Add back the *current challan's* quantity to effectively "undispatch" it for editing
                     const currentChallanQty = challanItem ? challanItem.challanQuantity : 0;
                     itemData.remainingQuantity = (lineItem.quantity - dispatched) + currentChallanQty;
 
                     // STOCK CALCULATION
-                    // Available Stock = Inventory.available + CurrentChallanAmount (because we are theoretically putting it back to take it again)
                     const inv = inventoryData.find(
                         (i: any) =>
-                            (i.qualityId._id || i.qualityId) === itemData.qualityId &&
+                            getObjId(i.qualityId) === itemData.qualityId &&
                             i.type === "Taka"
                     );
                     itemData.availableStock = (inv?.availableMeters || 0) + currentChallanQty;
@@ -129,52 +130,42 @@ export function ChallanCreatePage() {
 
                     // Map Selected Pieces
                     if (challanItem && challanItem.selectedPieces) {
-                        // We need to fetch these specific pieces details if not in "Available" list?
-                        // Actually, fetchAvailableStockPieces only returns status="Available".
-                        // The pieces in this challan are status="Sold" (or whatever).
-                        // We need to manually inject them into "availablePieces" for this row so they can be selected.
-
-                        // For now, let's just assume we map them as selected.
-                        // But we need the `StockPiece` objects.
                         itemData.selectedPieces = challanItem.selectedPieces.map((p: any) => ({
                             _id: p.stockPieceId,
                             takaNo: p.takaNo,
                             meter: p.meter,
-                            status: 'Available' // Pretend they are available for valid selection logic
+                            status: 'Available'
                         })) as any;
                     }
 
-                    // Filter available pieces for dropdown
-                    // We must include the pieces currently in this challan + actual available pieces
+                    // Filter available pieces
                     const relevantPieces = stockPiecesData.filter(
-                        (p: any) =>
-                            (p.qualityId._id || p.qualityId) === itemData.qualityId
+                        (p: any) => getObjId(p.qualityId) === itemData.qualityId
                     );
-                    // Merge with our selected pieces (which might not be in relevantPieces because they are Sold)
                     itemData.availablePieces = [...relevantPieces, ...(itemData.selectedPieces || [])];
 
-                    // Auto-select logic? No, just set selected if challanItem exists
                     itemData.selected = !!challanItem;
 
                 } else {
                     // Saree Logic
                     itemData.matchingQuantities = lineItem.matchingQuantities.map((mq: any) => {
+                        const mqId = getObjId(mq.matchingId);
                         const challanMq = challanItem?.matchingQuantities?.find(
-                            (cmq: any) => (cmq.matchingId._id || cmq.matchingId) === (mq.matchingId._id || mq.matchingId)
+                            (cmq: any) => getObjId(cmq.matchingId) === mqId
                         );
                         const dispatched = mq.dispatchedQuantity || 0;
                         const currentQty = challanMq ? challanMq.challanQuantity : 0;
 
                         const inv = inventoryData.find(
                             (i: any) =>
-                                (i.qualityId._id || i.qualityId) === itemData.qualityId &&
-                                (i.designId._id || i.designId) === itemData.designId &&
-                                (i.matchingId._id || i.matchingId) === (mq.matchingId._id || mq.matchingId) &&
+                                getObjId(i.qualityId) === itemData.qualityId &&
+                                getObjId(i.designId) === itemData.designId &&
+                                getObjId(i.matchingId) === mqId &&
                                 i.type === "Saree"
                         );
 
                         return {
-                            matchingId: mq.matchingId._id || mq.matchingId,
+                            matchingId: mqId,
                             orderedQuantity: mq.quantity,
                             challanQuantity: currentQty,
                             remainingQuantity: (mq.quantity - dispatched) + currentQty,
@@ -192,7 +183,7 @@ export function ChallanCreatePage() {
 
         } catch (error) {
             console.error("Error loading challan:", error);
-            setError("Failed to load challan details");
+            setError("Failed to load challan details (" + (error as Error).message + ")");
         } finally {
             setLoading(false);
         }

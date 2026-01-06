@@ -108,12 +108,24 @@ export const updateOrder = async (req, res, next) => {
 // Helper to reverse inventory reservation when order is deleted
 async function reverseInventoryReservation(lineItems, session) {
     const Inventory = mongoose.model("Inventory");
+    const METERS_PER_TAKA = 120;
 
     for (const item of lineItems) {
         const type = item.quantityType || item.catalogType;
 
         if (type === "Taka") {
-            // Find inventory to release reservation from
+            // Calculate quantities to reverse
+            let qtyMeters = 0;
+            let qtyTaka = 0;
+
+            if (item.quantityType === "Taka") {
+                qtyTaka = item.quantity || 0;
+                qtyMeters = qtyTaka * METERS_PER_TAKA;
+            } else {
+                qtyMeters = item.quantity || 0;
+                qtyTaka = Math.round(qtyMeters / METERS_PER_TAKA);
+            }
+
             const query = {
                 qualityId: item.qualityId,
                 designId: item.designId,
@@ -121,17 +133,16 @@ async function reverseInventoryReservation(lineItems, session) {
             };
             if (item.factoryId) query.factoryId = item.factoryId;
 
-            // We decrease Ordered count.
-            // Since we don't know exactly which doc was incremented (if duplicates exist),
-            // we find one (preferably the one with ordered count > 0) or just the first match.
-            // Given the uniqueness constraints usually applied, query should hit the main record.
             const inventory = await Inventory.findOne(query).session(session);
 
             if (inventory) {
                 await Inventory.findByIdAndUpdate(
                     inventory._id,
                     {
-                        $inc: { totalMetersOrdered: -(item.quantity || 0) },
+                        $inc: {
+                            totalMetersOrdered: -qtyMeters,
+                            totalTakaOrdered: -qtyTaka
+                        },
                     },
                     { session }
                 );
@@ -183,7 +194,7 @@ export const deleteOrder = async (req, res, next) => {
                         }))
                     };
                 } else {
-                    // Taka
+                    // Taka or Meter
                     return {
                         ...item.toObject(),
                         quantity: Math.max(0, (item.quantity || 0) - (item.dispatchedQuantity || 0))
@@ -192,11 +203,6 @@ export const deleteOrder = async (req, res, next) => {
             }), null); // No session
         } catch (revError) {
             console.error("Error reversing inventory during order delete", revError);
-            // Proceed to delete order anyway? Or fail?
-            // If we fail, order stays and stock stays "reserved".
-            // If we delete, stock stays "reserved" (ghost).
-            // Let's assume we want to force delete even if reversal fails, 
-            // BUT logging is critical.
         }
 
         await Order.findByIdAndDelete(req.params.id);

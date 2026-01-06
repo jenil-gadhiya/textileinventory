@@ -227,10 +227,23 @@ export async function updateInventoryFromProduction(
 // Helper function to deduct stock after order
 // Helper function to reserve stock when order is placed
 export async function reserveInventoryForOrder(lineItems, session = null) {
+    const METERS_PER_TAKA = 120;
     for (const item of lineItems) {
         const type = item.quantityType || item.catalogType;
 
         if (type === "Taka") {
+            // Calculate quantities
+            let qtyMeters = 0;
+            let qtyTaka = 0;
+
+            if (item.quantityType === "Taka") {
+                qtyTaka = item.quantity || 0;
+                qtyMeters = qtyTaka * METERS_PER_TAKA;
+            } else {
+                qtyMeters = item.quantity || 0;
+                qtyTaka = Math.round(qtyMeters / METERS_PER_TAKA);
+            }
+
             // Find best inventory to reserve (this is just for tracking, doesn't lock specific items)
             const query = {
                 qualityId: item.qualityId,
@@ -248,7 +261,10 @@ export async function reserveInventoryForOrder(lineItems, session = null) {
                 await Inventory.findByIdAndUpdate(
                     target._id,
                     {
-                        $inc: { totalMetersOrdered: item.quantity || 0 }, // Increase Ordered
+                        $inc: {
+                            totalMetersOrdered: qtyMeters,
+                            totalTakaOrdered: qtyTaka
+                        },
                     },
                     { session }
                 );
@@ -259,7 +275,8 @@ export async function reserveInventoryForOrder(lineItems, session = null) {
                     qualityId: item.qualityId,
                     designId: item.designId,
                     type: "Taka",
-                    totalMetersOrdered: item.quantity || 0,
+                    totalMetersOrdered: qtyMeters,
+                    totalTakaOrdered: qtyTaka,
                     factoryId: item.factoryId // FIXED: Pass factoryId
                 }], { session });
             }
@@ -465,9 +482,21 @@ export const recalculateInventory = async (req, res, next) => {
                 let pendingQty = 0;
 
                 if (type === "Taka") {
-                    pendingQty = Math.max(0, (item.quantity || 0) - (item.dispatchedQuantity || 0));
+                    const METERS_PER_TAKA = 120;
+                    const pendingRaw = Math.max(0, (item.quantity || 0) - (item.dispatchedQuantity || 0));
 
-                    if (pendingQty > 0) {
+                    let pendingQty = 0; // Meters
+                    let pendingTaka = 0;
+
+                    if (item.quantityType === "Taka") {
+                        pendingTaka = pendingRaw;
+                        pendingQty = pendingRaw * METERS_PER_TAKA;
+                    } else {
+                        pendingQty = pendingRaw;
+                        pendingTaka = Math.round(pendingQty / METERS_PER_TAKA);
+                    }
+
+                    if (pendingQty > 0 || pendingTaka > 0) {
                         const qId = item.qualityId?.toString();
                         const dId = item.designId?.toString();
                         const fId = item.factoryId?.toString();
@@ -486,6 +515,7 @@ export const recalculateInventory = async (req, res, next) => {
 
                         if (candidates.length > 0) {
                             candidates[0].calculated.totalMetersOrdered += pendingQty;
+                            candidates[0].calculated.totalTakaOrdered += pendingTaka;
                         }
                     }
                 } else {
@@ -545,7 +575,7 @@ export const recalculateInventory = async (req, res, next) => {
                     totalTakaProduced: calculated.totalTakaProduced,
                     totalSareeProduced: calculated.totalSareeProduced,
                     totalMetersOrdered: calculated.totalMetersOrdered,
-                    totalTakaOrdered: 0,
+                    totalTakaOrdered: calculated.totalTakaOrdered,
                     totalSareeOrdered: calculated.totalSareeOrdered
                 });
                 updatedCount++;

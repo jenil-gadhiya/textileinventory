@@ -181,7 +181,7 @@ export function StockReportPage() {
                     <div className="flex gap-2">
                         <Button
                             onClick={handleRecalculate}
-                            variant="outline"
+                            variant="secondary"
                             className="gap-2"
                             disabled={isRecalculating}
                         >

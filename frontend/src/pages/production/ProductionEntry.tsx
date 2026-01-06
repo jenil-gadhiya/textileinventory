@@ -412,6 +412,8 @@ export function ProductionEntryPage() {
                     }
 
                     if (hasNext) {
+                        alert(`Saved! Switching to next design: ${nextDesignNumber}`);
+
                         // Reset fields but set new design
                         if (stockType === "Taka") {
                             setTakaDesignId(nextDesignId);
@@ -424,11 +426,11 @@ export function ProductionEntryPage() {
                                 takaNoRef.current?.focus();
                             }, 100);
                         } else {
-                            setDesignId(nextDesignId); // Will trigger fetchMatchingsForDesign via useEffect
-                            setMatchingQuantities([]); // Clear temporarily
+                            console.log("Switching to next design ID:", nextDesignId);
+                            setMatchingQuantities([]); // Clear immediately to avoid stale data render
                             setCut(0);
+                            setDesignId(nextDesignId); // Will trigger effect
                         }
-                        alert(`Saved! Switched to next design: ${nextDesignNumber}`);
                     } else {
                         alert("Saved! No more designs available for this quality.");
                         navigate("/production/list");
@@ -684,15 +686,22 @@ export function ProductionEntryPage() {
                                         {matchingQuantities.length > 0 && (
                                             <div className="space-y-4">
                                                 <h3 className="font-semibold text-lg">Matching Quantities</h3>
-                                                {matchingQuantities.map((mq) => {
-                                                    const mId = typeof mq.matchingId === 'object' ? (mq.matchingId as any)._id || (mq.matchingId as any).id : mq.matchingId;
+                                                {matchingQuantities.map((mq, idx) => {
+                                                    if (!mq) return null;
+                                                    const mId = typeof mq.matchingId === 'object'
+                                                        ? (mq.matchingId as any)._id || (mq.matchingId as any).id
+                                                        : mq.matchingId;
+
+                                                    // Fallback key if mId is missing (shouldn't happen but prevents crash)
+                                                    const key = mId || `mq-${idx}`;
+
                                                     return (
-                                                        <div key={mId}>
-                                                            <Label htmlFor={`matching-${mId}`}>
-                                                                {mq.matchingName}
+                                                        <div key={key}>
+                                                            <Label htmlFor={`matching-${key}`}>
+                                                                {mq.matchingName || "Unknown Matching"}
                                                             </Label>
                                                             <Input
-                                                                id={`matching-${mId}`}
+                                                                id={`matching-${key}`}
                                                                 type="number"
                                                                 min="0"
                                                                 value={mq.quantity}

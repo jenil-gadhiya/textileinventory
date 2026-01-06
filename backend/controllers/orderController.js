@@ -42,23 +42,28 @@ export const getOrder = async (req, res, next) => {
 
 // CHANGED: Order creation NOW deducts stock (reserves it)
 // Stock will be physically reduced when Challan is created
+// CHANGED: Order creation NOW deducts stock (reserves it)
+// Stock will be physically reduced when Challan is created
 export const createOrder = async (req, res, next) => {
-    console.log("[CreateOrder] Start");
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    console.log("[CreateOrder] Transaction Started");
+    console.log("[CreateOrder] Start (No Transaction)");
 
     try {
         const order = new Order(req.body);
-        await order.save({ session });
+        await order.save();
         console.log("[CreateOrder] Order Saved:", order._id);
 
         // Reserve inventory for this order
-        await reserveInventoryForOrder(order.lineItems, session);
-        console.log("[CreateOrder] Inventory Reserved");
-
-        await session.commitTransaction();
-        console.log("[CreateOrder] Transaction Committed");
+        try {
+            await reserveInventoryForOrder(order.lineItems); // No session
+            console.log("[CreateOrder] Inventory Reserved");
+        } catch (reserveError) {
+            console.error("[CreateOrder] Reserve Failed (Order orphaned?):", reserveError);
+            // Ideally we should delete the order if reservation fails, 
+            // but for now let's just propagate error to know WHY.
+            // Or better: try to delete the order to rollback manually.
+            await Order.findByIdAndDelete(order._id);
+            throw reserveError;
+        }
 
         // Return populated order
         const populated = await Order.findById(order._id)
@@ -73,12 +78,7 @@ export const createOrder = async (req, res, next) => {
         res.status(201).json(populated);
     } catch (error) {
         console.error("[CreateOrder] Error:", error);
-        await session.abortTransaction();
-        console.log("[CreateOrder] Transaction Aborted");
         next(error);
-    } finally {
-        session.endSession();
-        console.log("[CreateOrder] Session Ended");
     }
 };
 

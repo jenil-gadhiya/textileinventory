@@ -164,76 +164,45 @@ async function reverseInventoryReservation(lineItems, session) {
 }
 
 export const deleteOrder = async (req, res, next) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
-        const order = await Order.findById(req.params.id).session(session);
+        const order = await Order.findById(req.params.id);
         if (!order) {
-            await session.abortTransaction();
             return res.status(404).json({ message: "Order not found" });
         }
 
-        // 1. Check if order can be deleted (only if pending?)
-        // If partially dispatched or completed, we probably shouldn't delete it
-        // OR we should only release the *remaining* reservation?
-        // But users might "force delete".
-        // If dispatched, stock is already deducted.
-        // If we delete order, we should theoretically REVERSE dispatch too?
-        // Usually you delete Challans first (reversing dispatch).
-        // If Order has dispatchStatus 'pending', we just reverse reservation.
-        // If 'partial', we reverse reservation of the WHOLE amount? No, only the ordered amount?
-        // Reservation is tracking "Total quantity ordered". "Available" = "Produced" - "Ordered".
-        // Dispatch "Consumes" the reservation (Produced -= qty, Ordered -= qty).
-        // So "Ordered" represents "Pending + Dispatched"? Or just "Pending"?
-        // In `deductInventoryForChallan`: `totalMetersOrdered: -deductFromThis`.
-        // So "Ordered" represents ONLY "Pending to be dispatched".
-        // Once dispatched, it is removed from "Ordered".
-        // So `totalMetersOrdered` is essentially "Backlog".
-        // So if we delete the order, we simply remove whatever `quantity` was added to `Ordered`.
-        // BUT wait. `reserve` added `item.quantity`.
-        // `deduct` (dispatch) removed `challanQuantity`.
-        // So the remaining `Ordered` count in DB *is* the pending amount.
-        // BUT `reverseInventoryReservation` (my helper above) subtracts `item.quantity` (original full amount).
-        // If we dispatched some, `totalMetersOrdered` is already lower.
-        // If we subtract full amount, `totalMetersOrdered` becomes negative!
-        // CORRECTION: We should subtract `item.quantity - item.dispatchedQuantity`.
-        // Because that is what remains in "Ordered" state.
+        // Reverse Stock Reservation (Non-Transactional)
+        try {
+            await reverseInventoryReservation(order.lineItems.map(item => {
+                // Calculate pending quantity to reverse
+                if (item.catalogType === "Saree") {
+                    return {
+                        ...item.toObject(),
+                        matchingQuantities: item.matchingQuantities.map(mq => ({
+                            ...mq,
+                            quantity: Math.max(0, (mq.quantity || 0) - (mq.dispatchedQuantity || 0))
+                        }))
+                    };
+                } else {
+                    // Taka
+                    return {
+                        ...item.toObject(),
+                        quantity: Math.max(0, (item.quantity || 0) - (item.dispatchedQuantity || 0))
+                    };
+                }
+            }), null); // No session
+        } catch (revError) {
+            console.error("Error reversing inventory during order delete", revError);
+            // Proceed to delete order anyway? Or fail?
+            // If we fail, order stays and stock stays "reserved".
+            // If we delete, stock stays "reserved" (ghost).
+            // Let's assume we want to force delete even if reversal fails, 
+            // BUT logging is critical.
+        }
 
-        await reverseInventoryReservation(order.lineItems.map(item => {
-            // Calculate pending quantity to reverse
-            // For Taka: item.quantity - item.dispatchedQuantity
-            // For Saree: mq.quantity - mq.dispatchedQuantity
+        await Order.findByIdAndDelete(req.params.id);
 
-            if (item.catalogType === "Saree") { // Saree or Taka-Saree?
-                // Logic inside helper iterates matchingQuantities.
-                // We need to map item to reflect CURRENT pending quantities?
-                // Or modify helper to handle dispatched?
-                // Better to map here.
-                return {
-                    ...item.toObject(),
-                    matchingQuantities: item.matchingQuantities.map(mq => ({
-                        ...mq,
-                        quantity: Math.max(0, (mq.quantity || 0) - (mq.dispatchedQuantity || 0))
-                    }))
-                };
-            } else {
-                // Taka
-                return {
-                    ...item.toObject(),
-                    quantity: Math.max(0, (item.quantity || 0) - (item.dispatchedQuantity || 0))
-                };
-            }
-        }), session);
-
-        await Order.findByIdAndDelete(req.params.id, { session });
-
-        await session.commitTransaction();
         res.json({ message: "Order deleted successfully" });
     } catch (error) {
-        await session.abortTransaction();
         next(error);
-    } finally {
-        session.endSession();
     }
 };

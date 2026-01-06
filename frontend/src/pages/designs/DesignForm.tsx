@@ -135,7 +135,7 @@ export function DesignFormPage() {
                         value={input.value}
                         onChange={(e) => updateInput(input.id, e.target.value)}
                         onKeyDown={(e) => handleKeyDown(input.id, e)}
-                        className="bg-background text-foreground border-border/50"
+                        className="bg-transparent text-body border-border/50"
                       />
                     </div>
                     {inputs.length > 1 && (

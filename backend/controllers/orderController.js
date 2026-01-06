@@ -43,17 +43,22 @@ export const getOrder = async (req, res, next) => {
 // CHANGED: Order creation NOW deducts stock (reserves it)
 // Stock will be physically reduced when Challan is created
 export const createOrder = async (req, res, next) => {
+    console.log("[CreateOrder] Start");
     const session = await mongoose.startSession();
     session.startTransaction();
+    console.log("[CreateOrder] Transaction Started");
 
     try {
         const order = new Order(req.body);
         await order.save({ session });
+        console.log("[CreateOrder] Order Saved:", order._id);
 
         // Reserve inventory for this order
         await reserveInventoryForOrder(order.lineItems, session);
+        console.log("[CreateOrder] Inventory Reserved");
 
         await session.commitTransaction();
+        console.log("[CreateOrder] Transaction Committed");
 
         // Return populated order
         const populated = await Order.findById(order._id)
@@ -67,10 +72,13 @@ export const createOrder = async (req, res, next) => {
 
         res.status(201).json(populated);
     } catch (error) {
+        console.error("[CreateOrder] Error:", error);
         await session.abortTransaction();
+        console.log("[CreateOrder] Transaction Aborted");
         next(error);
     } finally {
         session.endSession();
+        console.log("[CreateOrder] Session Ended");
     }
 };
 

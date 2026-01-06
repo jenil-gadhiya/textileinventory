@@ -233,6 +233,7 @@ export async function reserveInventoryForOrder(lineItems, session = null) {
             const target = candidates[0]; // Pick best or undefined
 
             if (target) {
+                console.log(`[Reserve] Updating inventory ${target._id} for Quality ${item.qualityId}`);
                 await Inventory.findByIdAndUpdate(
                     target._id,
                     {
@@ -241,13 +242,14 @@ export async function reserveInventoryForOrder(lineItems, session = null) {
                     { session }
                 );
             } else {
+                console.log(`[Reserve] Creating NEW inventory for Quality ${item.qualityId} Factory ${item.factoryId}`);
                 // If no inventory exists, create a placeholder to track this shortage
                 await Inventory.create([{
                     qualityId: item.qualityId,
                     designId: item.designId,
                     type: "Taka",
                     totalMetersOrdered: item.quantity || 0,
-                    // factoryId undefined
+                    factoryId: item.factoryId // FIXED: Pass factoryId
                 }], { session });
             }
 
@@ -267,6 +269,7 @@ export async function reserveInventoryForOrder(lineItems, session = null) {
                 let target = candidates[0];
 
                 if (target) {
+                    console.log(`[Reserve] Updating Saree inventory ${target._id}`);
                     await Inventory.findByIdAndUpdate(
                         target._id,
                         {
@@ -275,18 +278,21 @@ export async function reserveInventoryForOrder(lineItems, session = null) {
                         { session }
                     );
                 } else {
+                    console.log(`[Reserve] Creating NEW Saree inventory`);
                     await Inventory.create([{
                         qualityId: item.qualityId,
                         designId: item.designId,
                         matchingId: mq.matchingId,
                         type: "Saree",
                         cut: item.cut,
-                        totalSareeOrdered: mq.quantity || 0
+                        totalSareeOrdered: mq.quantity || 0,
+                        factoryId: item.factoryId // FIXED: Pass factoryId
                     }], { session });
                 }
             }
         }
     }
+    console.log("[Reserve] Completed reservation");
 }
 
 // DELETE /api/inventory/:id

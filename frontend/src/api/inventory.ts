@@ -58,12 +58,16 @@ export async function fetchInventory(params?: {
     quality?: string;
     design?: string;
     type?: string;
+    fromDate?: string;
+    toDate?: string;
 }): Promise<InventoryItem[]> {
     const queryParams = new URLSearchParams();
     if (params?.factory) queryParams.append("factory", params.factory);
     if (params?.quality) queryParams.append("quality", params.quality);
     if (params?.design) queryParams.append("design", params.design);
     if (params?.type) queryParams.append("type", params.type);
+    if (params?.fromDate) queryParams.append("fromDate", params.fromDate);
+    if (params?.toDate) queryParams.append("toDate", params.toDate);
 
     const url = `/inventory${queryParams.toString() ? `?${queryParams}` : ""}`;
     const response = await http.get(url);

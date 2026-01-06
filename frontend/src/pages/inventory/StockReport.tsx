@@ -45,7 +45,7 @@ export function StockReportPage() {
 
     useEffect(() => {
         loadInventory();
-    }, [factoryFilter, qualityFilter, designFilter, typeFilter]);
+    }, [factoryFilter, qualityFilter, designFilter, typeFilter, fromDate, toDate]);
 
     const loadFilterOptions = async () => {
         try {
@@ -70,8 +70,8 @@ export function StockReportPage() {
             if (qualityFilter) params.quality = qualityFilter;
             if (designFilter) params.design = designFilter;
             if (typeFilter) params.type = typeFilter;
-            // Note: Date filters are primarily for PDF generation here,
-            // but if backend supported stock-at-date, we would pass them here too.
+            if (fromDate) params.fromDate = fromDate;
+            if (toDate) params.toDate = toDate;
 
             const data = await fetchInventory(params);
             setInventory(data);

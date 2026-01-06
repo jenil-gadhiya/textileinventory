@@ -4,13 +4,24 @@ import mongoose from "mongoose";
 // GET /api/inventory?factory=X&quality=Y&design=Z&type=Taka
 export const getInventory = async (req, res, next) => {
     try {
-        const { factory, quality, design, type } = req.query;
+        const { factory, quality, design, type, fromDate, toDate } = req.query;
 
         const filter = {};
         if (factory) filter.factoryId = factory;
         if (quality) filter.qualityId = quality;
         if (design) filter.designId = design;
         if (type) filter.type = type;
+
+        // Apply date filter (Active in period)
+        if (fromDate || toDate) {
+            filter.updatedAt = {};
+            if (fromDate) filter.updatedAt.$gte = new Date(fromDate);
+            if (toDate) {
+                const endOfDay = new Date(toDate);
+                endOfDay.setHours(23, 59, 59, 999);
+                filter.updatedAt.$lte = endOfDay;
+            }
+        }
 
         const inventoryItems = await Inventory.find(filter)
             .populate("qualityId", "fabricName")

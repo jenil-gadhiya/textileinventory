@@ -78,3 +78,8 @@ export async function validateOrderStock(lineItems: any[]): Promise<ValidationRe
 export async function deleteInventory(id: string): Promise<void> {
     await http.delete(`/inventory/${id}`);
 }
+
+export async function recalculateInventory(): Promise<any> {
+    const response = await http.post("/inventory/recalculate", {});
+    return response.data;
+}

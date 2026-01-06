@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/DataTable";
-import { fetchInventory, InventoryItem } from "@/api/inventory";
+import { fetchInventory, InventoryItem, recalculateInventory } from "@/api/inventory";
 import { fetchFactories } from "@/api/factories";
 import { fetchQualities } from "@/api/qualities";
 import { fetchDesigns } from "@/api/designs";
@@ -18,6 +18,7 @@ import {
 export function StockReportPage() {
     const [inventory, setInventory] = useState<InventoryItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isRecalculating, setIsRecalculating] = useState(false);
 
     // Detail Modal State
     const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
@@ -112,6 +113,22 @@ export function StockReportPage() {
         window.open(`/api/inventory/pdf?${query.toString()}`, "_blank");
     };
 
+    const handleRecalculate = async () => {
+        if (!confirm("This will fully recalculate inventory based on all Productions, Orders, and Challans. It may take a few seconds. Continue?")) return;
+
+        try {
+            setIsRecalculating(true);
+            const res = await recalculateInventory();
+            alert(`Recalculation Complete.\nUpdated: ${res.stats.updatedInventoryCount} records.`);
+            loadInventory();
+        } catch (error) {
+            console.error("Recalculate failed", error);
+            alert("Recalculation failed. Check console.");
+        } finally {
+            setIsRecalculating(false);
+        }
+    };
+
     const hasTaka = inventory.some(i => i.type === "Taka");
     const hasSaree = inventory.some(i => i.type === "Saree");
 
@@ -161,9 +178,19 @@ export function StockReportPage() {
                 title="Stock Report"
                 subtitle="View current inventory levels and availability"
                 actions={
-                    <Button onClick={handleGeneratePDF} variant="secondary" className="gap-2">
-                        📄 Generate PDF
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button
+                            onClick={handleRecalculate}
+                            variant="outline"
+                            className="gap-2"
+                            disabled={isRecalculating}
+                        >
+                            {isRecalculating ? "Running..." : "🔄 Recalculate Stock"}
+                        </Button>
+                        <Button onClick={handleGeneratePDF} variant="secondary" className="gap-2">
+                            📄 Generate PDF
+                        </Button>
+                    </div>
                 }
             />
 

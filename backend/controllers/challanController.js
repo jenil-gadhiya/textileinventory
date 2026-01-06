@@ -42,17 +42,13 @@ export const getChallan = async (req, res, next) => {
 
 // POST /api/challans - Create challan from order
 export const createChallan = async (req, res, next) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
         const { orderId, items, ...challanData } = req.body;
 
         // STEP 1: Validate stock for challan quantities
-        const validationResult = await validateChallanStock(items, session);
+        const validationResult = await validateChallanStock(items); // No session
 
         if (!validationResult.valid) {
-            await session.abortTransaction();
             return res.status(400).json({
                 message: "Insufficient stock for one or more items",
                 insufficientItems: validationResult.insufficientItems,
@@ -65,16 +61,13 @@ export const createChallan = async (req, res, next) => {
             ...challanData,
             items,
         });
-        await challan.save({ session });
+        await challan.save();
 
         // STEP 3: Deduct stock based on challan quantities
-        await deductInventoryForChallan(items, session);
+        await deductInventoryForChallan(items); // No session
 
         // STEP 4: Update order dispatch status
-        await updateOrderDispatchStatus(orderId, items, session);
-
-        // STEP 5: Commit transaction
-        await session.commitTransaction();
+        await updateOrderDispatchStatus(orderId, items); // No session
 
         const populated = await Challan.findById(challan._id)
             .populate("orderId")
@@ -85,16 +78,276 @@ export const createChallan = async (req, res, next) => {
 
         res.status(201).json(populated);
     } catch (error) {
-        await session.abortTransaction();
+        console.error("Error creating challan:", error);
+        // Manual rollback attempt logic could be added here if needed, 
+        // e.g., deleting the challan if deduction fails. 
+        // For now, we rely on error logging/reporting.
         next(error);
-    } finally {
-        session.endSession();
     }
 };
 
-// Helper: Validate stock for challan
+// PUT /api/challans/:id - Update challan
+export const updateChallan = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { items, ...updateData } = req.body;
+
+        const oldChallan = await Challan.findById(id);
+        if (!oldChallan) {
+            return res.status(404).json({ message: "Challan not found" });
+        }
+
+        // REVERT OLD STOCK (No Session)
+        // We put back the stock as if the challan never happened
+        for (const item of oldChallan.items) {
+            if (item.type === "Taka" && item.selectedPieces && item.selectedPieces.length > 0) {
+                // Restore StockPieces
+                for (const piece of item.selectedPieces) {
+                    await StockPiece.findByIdAndUpdate(
+                        piece.stockPieceId,
+                        { status: "Available", challanId: null }
+                    );
+                }
+
+                // Restore Inventory (Meters & Pieces)
+                await Inventory.findOneAndUpdate(
+                    {
+                        qualityId: item.qualityId,
+                        designId: item.designId,
+                        type: "Taka"
+                    },
+                    {
+                        $inc: {
+                            totalMetersProduced: item.challanQuantity,
+                            totalTakaProduced: item.selectedPieces.length,
+                            totalMetersOrdered: item.challanQuantity,
+                            totalTakaOrdered: item.selectedPieces.length
+                        }
+                    }
+                );
+            } else if (item.type === "Saree" && item.matchingQuantities) {
+                // Restore Saree Inventory
+                for (const mq of item.matchingQuantities) {
+                    await Inventory.findOneAndUpdate(
+                        {
+                            qualityId: item.qualityId,
+                            designId: item.designId,
+                            matchingId: mq.matchingId,
+                            type: "Saree",
+                            cut: item.cut
+                        },
+                        {
+                            $inc: {
+                                totalSareeProduced: mq.challanQuantity,
+                                totalSareeOrdered: mq.challanQuantity
+                            }
+                        }
+                    );
+                }
+            }
+        }
+
+        // Revert order dispatched quantities temporarily
+        const order = await Order.findById(oldChallan.orderId);
+        if (order) {
+            for (const item of oldChallan.items) {
+                const orderItem = order.lineItems[item.orderLineItemIndex];
+                if (orderItem) {
+                    if (item.type === "Taka") {
+                        orderItem.dispatchedQuantity = Math.max(0, (orderItem.dispatchedQuantity || 0) - item.challanQuantity);
+                    } else if (item.matchingQuantities) {
+                        for (const mq of item.matchingQuantities) {
+                            const orderMq = orderItem.matchingQuantities?.find(
+                                omq => omq.matchingId?.toString() === mq.matchingId?.toString()
+                            );
+                            if (orderMq) {
+                                orderMq.dispatchedQuantity = Math.max(0, (orderMq.dispatchedQuantity || 0) - mq.challanQuantity);
+                            }
+                        }
+                    }
+                }
+            }
+            await order.save();
+        }
+
+        // Validate New Item Stock
+        const validationResult = await validateChallanStock(items);
+        if (!validationResult.valid) {
+            return res.status(400).json({
+                message: "Insufficient stock for one or more items",
+                insufficientItems: validationResult.insufficientItems,
+            });
+        }
+
+        // Apply New Stock Deduction
+        await deductInventoryForChallan(items);
+
+        // Update Order Dispatch Status with new items
+        await updateOrderDispatchStatus(oldChallan.orderId, items);
+
+        // Update Challan Document
+        const updatedChallan = await Challan.findByIdAndUpdate(
+            id,
+            { ...updateData, items },
+            { new: true }
+        )
+            .populate("orderId")
+            .populate("partyId")
+            .populate("items.qualityId")
+            .populate("items.designId")
+            .populate("items.matchingQuantities.matchingId");
+
+        res.json(updatedChallan);
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+// DELETE /api/challans/:id - Delete challan and reverse inventory
+export const deleteChallan = async (req, res, next) => {
+    try {
+        const challan = await Challan.findById(req.params.id);
+        if (!challan) {
+            return res.status(404).json({ message: "Challan not found" });
+        }
+
+        // Reverse inventory deductions (Add back logic)
+        for (const item of challan.items) {
+            if (item.type === "Taka") {
+                if (item.selectedPieces && item.selectedPieces.length > 0) {
+                    // Restore StockPieces back to Available status
+                    for (const piece of item.selectedPieces) {
+                        await StockPiece.findByIdAndUpdate(
+                            piece.stockPieceId,
+                            { status: "Available", challanId: null }
+                        );
+                    }
+                }
+
+                // Restore Main Inventory
+                const totalMeters = item.challanQuantity;
+                const totalPieces = item.selectedPieces ? item.selectedPieces.length : 0; // Use selectedPieces length if available, else 0? Or assume manual?
+                // Note: If manual entry without pieces selected (legacy?), totalPieces might be 0.
+
+                // We use findOneAndUpdate without factoryId, it will pick one match.
+                // Ideally this should be distributed or tracked, but for now this restores the global count.
+                await Inventory.findOneAndUpdate(
+                    {
+                        qualityId: item.qualityId,
+                        designId: item.designId,
+                        type: "Taka"
+                    },
+                    {
+                        $inc: {
+                            totalMetersProduced: totalMeters,
+                            totalTakaProduced: totalPieces,
+                            // CRITICAL: We also add back to "Ordered" because the order is no longer dispatched, 
+                            // so it reverts to "Pending Order" (Reservation) state.
+                            totalMetersOrdered: totalMeters,
+                            totalTakaOrdered: totalPieces
+                        }
+                    }
+                );
+            } else if (item.type === "Saree" && item.matchingQuantities) {
+                // Restore Saree inventory
+                for (const mq of item.matchingQuantities) {
+                    await Inventory.findOneAndUpdate(
+                        {
+                            qualityId: item.qualityId,
+                            designId: item.designId,
+                            matchingId: mq.matchingId,
+                            type: "Saree",
+                            cut: item.cut
+                        },
+                        {
+                            $inc: {
+                                totalSareeProduced: mq.challanQuantity,
+                                totalSareeOrdered: mq.challanQuantity
+                            }
+                        }
+                    );
+                }
+            }
+        }
+
+        // Update order dispatch status (Reverse)
+        const order = await Order.findById(challan.orderId);
+        if (order) {
+            // Reverse dispatchedQuantity for each line item
+            for (const challanItem of challan.items) {
+                const orderItem = order.lineItems[challanItem.orderLineItemIndex];
+                if (orderItem) {
+                    if (challanItem.type === "Taka") {
+                        orderItem.dispatchedQuantity = Math.max(
+                            0,
+                            (orderItem.dispatchedQuantity || 0) - challanItem.challanQuantity
+                        );
+                    } else if (challanItem.matchingQuantities) {
+                        for (const mq of challanItem.matchingQuantities) {
+                            const orderMq = orderItem.matchingQuantities?.find(
+                                omq => omq.matchingId?.toString() === mq.matchingId?.toString()
+                            );
+                            if (orderMq) {
+                                orderMq.dispatchedQuantity = Math.max(
+                                    0,
+                                    (orderMq.dispatchedQuantity || 0) - mq.challanQuantity
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Recalculate dispatch status
+            const allDispatched = order.lineItems.every(item => {
+                const type = item.quantityType || item.catalogType;
+                if (type === "Taka") {
+                    return item.dispatchedQuantity >= item.quantity;
+                } else {
+                    return item.matchingQuantities.every(
+                        mq => mq.dispatchedQuantity >= mq.quantity
+                    );
+                }
+            });
+
+            const anyDispatched = order.lineItems.some(item => {
+                const type = item.quantityType || item.catalogType;
+                if (type === "Taka") {
+                    return item.dispatchedQuantity > 0;
+                } else {
+                    return item.matchingQuantities.some(mq => mq.dispatchedQuantity > 0);
+                }
+            });
+
+            if (allDispatched) {
+                order.dispatchStatus = "completed";
+                order.status = "completed";
+            } else if (anyDispatched) {
+                order.dispatchStatus = "partial";
+                order.status = "pending";
+            } else {
+                order.dispatchStatus = "pending";
+                order.status = "pending";
+            }
+
+            await order.save();
+        }
+
+        // Delete the challan
+        await Challan.findByIdAndDelete(req.params.id);
+
+        res.json({ message: "Challan deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting challan:", error);
+        next(error);
+    }
+};
+
+// ================= HELPERS =================
+
 // Helper: Validate stock for challan - Validate against Physical Stock (Produced)
-async function validateChallanStock(items, session) {
+async function validateChallanStock(items) {
     const insufficientItems = [];
 
     for (const item of items) {
@@ -103,15 +356,13 @@ async function validateChallanStock(items, session) {
             const inventories = await Inventory.find({
                 qualityId: item.qualityId,
                 type: "Taka",
-            })
-                .populate("qualityId", "fabricName")
-                .session(session);
+            }).populate("qualityId", "fabricName");
 
             let required = item.challanQuantity || 0;
             if ((item.quantityType === "Taka" || !item.quantityType) && item.selectedPieces && item.selectedPieces.length > 0) {
                 required = item.selectedPieces.reduce((sum, p) => sum + (p.meter || 0), 0);
             }
-            // Use Total Produced as available stock (We are fulfilling a reservation, so we ignore 'Ordered' count)
+            // Use Total Produced as available stock
             const available = inventories.reduce((sum, inv) => sum + (inv.totalMetersProduced || 0), 0);
 
             if (available < required) {
@@ -119,13 +370,12 @@ async function validateChallanStock(items, session) {
                     qualityName: inventories[0]?.qualityId?.fabricName || "Unknown",
                     type: "Taka",
                     required,
-                    available, // This is physical stock
+                    available,
                     shortage: required - available,
                 });
             }
         } else if (item.type === "Saree") {
             for (const mq of item.matchingQuantities || []) {
-                // Find ALL inventory records across all factories (ignore cut) and sum their stock
                 const inventories = await Inventory.find({
                     qualityId: item.qualityId,
                     designId: item.designId,
@@ -133,11 +383,9 @@ async function validateChallanStock(items, session) {
                     type: "Saree",
                 })
                     .populate("qualityId", "fabricName")
-                    .populate("matchingId", "matchingName")
-                    .session(session);
+                    .populate("matchingId", "matchingName");
 
                 const required = mq.challanQuantity || 0;
-                // Use Total Produced
                 const available = inventories.reduce((sum, inv) => sum + (inv.totalSareeProduced || 0), 0);
 
                 if (available < required) {
@@ -161,11 +409,9 @@ async function validateChallanStock(items, session) {
 }
 
 // Helper: Deduct inventory for challan (Smart deduction - deduct from factory with MORE stock first)
-// Helper: Deduct inventory for challan (Consumes Stock + Reservation)
-async function deductInventoryForChallan(challanItems, session = null) {
+async function deductInventoryForChallan(challanItems) {
     for (const item of challanItems) {
         if (item.type === "Taka") {
-            // Count how many pieces are being dispatched
             const piecesCount = item.selectedPieces ? item.selectedPieces.length : 0;
 
             // Mark selected pieces as "Sold"
@@ -174,8 +420,7 @@ async function deductInventoryForChallan(challanItems, session = null) {
                     if (piece.stockPieceId) {
                         await StockPiece.findByIdAndUpdate(
                             piece.stockPieceId,
-                            { status: "Sold", challanId: item.challanId },
-                            { session }
+                            { status: "Sold", challanId: item.challanId }
                         );
                     }
                 }
@@ -189,18 +434,16 @@ async function deductInventoryForChallan(challanItems, session = null) {
             let remainingToDeduct = totalMetersToDeduct;
             let remainingPiecesToDeduct = piecesCount;
 
-            // Find inventories, sort by Total Produced (Physical Stock) to deduct from where we have items
             const inventories = await Inventory.find({
                 qualityId: item.qualityId,
                 type: "Taka",
-            }).session(session);
+            });
 
             inventories.sort((a, b) => b.totalMetersProduced - a.totalMetersProduced);
 
             for (const inv of inventories) {
                 if (remainingToDeduct <= 0) break;
 
-                // We limit deduction to what is physically there (totalMetersProduced)
                 const availableInThisFactory = inv.totalMetersProduced;
                 const deductFromThis = Math.min(availableInThisFactory, remainingToDeduct);
 
@@ -218,8 +461,7 @@ async function deductInventoryForChallan(challanItems, session = null) {
                                 totalMetersOrdered: -deductFromThis, // Reduce reservation too
                                 totalTakaOrdered: -piecesToDeductFromThis
                             }
-                        },
-                        { session }
+                        }
                     );
                     remainingToDeduct -= deductFromThis;
                     remainingPiecesToDeduct -= piecesToDeductFromThis;
@@ -234,7 +476,7 @@ async function deductInventoryForChallan(challanItems, session = null) {
                     designId: item.designId,
                     matchingId: mq.matchingId,
                     type: "Saree",
-                }).session(session);
+                });
 
                 inventories.sort((a, b) => b.totalSareeProduced - a.totalSareeProduced);
 
@@ -252,8 +494,7 @@ async function deductInventoryForChallan(challanItems, session = null) {
                                     totalSareeProduced: -deductFromThis,
                                     totalSareeOrdered: -deductFromThis
                                 }
-                            },
-                            { session }
+                            }
                         );
                         remainingToDeduct -= deductFromThis;
                     }
@@ -264,8 +505,8 @@ async function deductInventoryForChallan(challanItems, session = null) {
 }
 
 // Helper: Update order dispatch status
-async function updateOrderDispatchStatus(orderId, challanItems, session) {
-    const order = await Order.findById(orderId).session(session);
+async function updateOrderDispatchStatus(orderId, challanItems) {
+    const order = await Order.findById(orderId);
 
     // Update dispatched quantities
     for (let i = 0; i < challanItems.length; i++) {
@@ -311,290 +552,10 @@ async function updateOrderDispatchStatus(orderId, challanItems, session) {
 
     if (allDispatched) {
         order.dispatchStatus = "completed";
-        order.status = "completed"; // Mark order as completed
+        order.status = "completed";
     } else if (anyDispatched) {
         order.dispatchStatus = "partial";
     }
 
-    await order.save({ session });
+    await order.save();
 }
-
-// PUT /api/challans/:id - Update challan
-export const updateChallan = async (req, res, next) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-        const { id } = req.params;
-        const { items, ...updateData } = req.body;
-
-        // 1. Get existing challan
-        const oldChallan = await Challan.findById(id).session(session);
-        if (!oldChallan) {
-            await session.abortTransaction();
-            return res.status(404).json({ message: "Challan not found" });
-        }
-
-        // 2. REVERT OLD STOCK - Restore Produced and Ordered counts (Add them back)
-        // This is the opposite of 'deductInventoryForChallan'
-        // We put back the stock as if the challan never happened, so it is "Produced" and "Reserved (Ordered)" again.
-        for (const item of oldChallan.items) {
-            if (item.type === "Taka" && item.selectedPieces && item.selectedPieces.length > 0) {
-                // Restore StockPieces
-                for (const piece of item.selectedPieces) {
-                    await StockPiece.findByIdAndUpdate(
-                        piece.stockPieceId,
-                        { status: "Available", challanId: null },
-                        { session }
-                    );
-                }
-
-                // Restore Inventory (Meters & Pieces)
-                await Inventory.findOneAndUpdate(
-                    {
-                        qualityId: item.qualityId,
-                        designId: item.designId,
-                        type: "Taka"
-                    },
-                    {
-                        $inc: {
-                            totalMetersProduced: item.challanQuantity,
-                            totalTakaProduced: item.selectedPieces.length,
-                            totalMetersOrdered: item.challanQuantity,
-                            totalTakaOrdered: item.selectedPieces.length
-                        }
-                    },
-                    { session }
-                );
-            } else if (item.type === "Saree" && item.matchingQuantities) {
-                // Restore Saree Inventory
-                for (const mq of item.matchingQuantities) {
-                    await Inventory.findOneAndUpdate(
-                        {
-                            qualityId: item.qualityId,
-                            designId: item.designId,
-                            matchingId: mq.matchingId,
-                            type: "Saree",
-                            cut: item.cut
-                        },
-                        {
-                            $inc: {
-                                totalSareeProduced: mq.challanQuantity,
-                                totalSareeOrdered: mq.challanQuantity
-                            }
-                        },
-                        { session }
-                    );
-                }
-            }
-        }
-
-        // Revert Order Dispatched Quantities
-        const order = await Order.findById(oldChallan.orderId).session(session);
-        if (order) {
-            for (const item of oldChallan.items) {
-                const orderItem = order.lineItems[item.orderLineItemIndex];
-                if (orderItem) {
-                    if (item.type === "Taka") {
-                        orderItem.dispatchedQuantity = Math.max(0, (orderItem.dispatchedQuantity || 0) - item.challanQuantity);
-                    } else if (item.matchingQuantities) {
-                        for (const mq of item.matchingQuantities) {
-                            const orderMq = orderItem.matchingQuantities?.find(
-                                omq => omq.matchingId?.toString() === mq.matchingId?.toString()
-                            );
-                            if (orderMq) {
-                                orderMq.dispatchedQuantity = Math.max(0, (orderMq.dispatchedQuantity || 0) - mq.challanQuantity);
-                            }
-                        }
-                    }
-                }
-            }
-            // We don't save order here yet, we'll do it after re-applying new values
-        }
-
-        // 3. VALIDATE NEW STOCK
-        const validationResult = await validateChallanStock(items, session);
-        if (!validationResult.valid) {
-            await session.abortTransaction();
-            return res.status(400).json({
-                message: "Insufficient stock for one or more items",
-                insufficientItems: validationResult.insufficientItems,
-            });
-        }
-
-        // 4. APPLY NEW STOCK
-        await deductInventoryForChallan(items, session);
-
-        // 5. UPDATE ORDER WITH NEW QUANTITIES
-        // We reuse the update helper but pass the *already modified* order object if possible?
-        // Actually `updateOrderDispatchStatus` fetches the order again.
-        // We must save the "Revert" changes to the order first?
-        // Yes, because `updateOrderDispatchStatus` does `Order.findById`.
-        // So we must save the reverted order state first.
-        if (order) await order.save({ session });
-
-        // Now apply new
-        await updateOrderDispatchStatus(oldChallan.orderId, items, session);
-
-        // 6. UPDATE CHALLAN DOCUMENT
-        // Merge items into updateData
-        const updatedChallan = await Challan.findByIdAndUpdate(
-            id,
-            { ...updateData, items },
-            { new: true, session }
-        )
-            .populate("orderId")
-            .populate("partyId")
-            .populate("items.qualityId")
-            .populate("items.designId")
-            .populate("items.matchingQuantities.matchingId");
-
-        await session.commitTransaction();
-        res.json(updatedChallan);
-
-    } catch (error) {
-        await session.abortTransaction();
-        next(error);
-    } finally {
-        session.endSession();
-    }
-};
-
-// DELETE /api/challans/:id - Delete challan and reverse inventory
-export const deleteChallan = async (req, res, next) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-        // Get the challan before deleting
-        const challan = await Challan.findById(req.params.id).session(session);
-        if (!challan) {
-            await session.abortTransaction();
-            return res.status(404).json({ message: "Challan not found" });
-        }
-
-        // Reverse inventory deductions (Add back logic)
-        for (const item of challan.items) {
-            if (item.type === "Taka" && item.selectedPieces && item.selectedPieces.length > 0) {
-                // Restore StockPieces back to Available status
-                for (const piece of item.selectedPieces) {
-                    await StockPiece.findByIdAndUpdate(
-                        piece.stockPieceId,
-                        { status: "Available", challanId: null },
-                        { session }
-                    );
-                }
-
-                // Add back to inventory (reverse the deduction)
-                const totalMeters = item.challanQuantity;
-                await Inventory.findOneAndUpdate(
-                    {
-                        qualityId: item.qualityId,
-                        designId: item.designId,
-                        type: "Taka"
-                    },
-                    {
-                        $inc: {
-                            totalMetersProduced: totalMeters,
-                            totalTakaProduced: item.selectedPieces.length,
-                            totalMetersOrdered: totalMeters,
-                            totalTakaOrdered: item.selectedPieces.length
-                        }
-                    },
-                    { session }
-                );
-            } else if (item.type === "Saree" && item.matchingQuantities) {
-                // Restore Saree inventory
-                for (const mq of item.matchingQuantities) {
-                    await Inventory.findOneAndUpdate(
-                        {
-                            qualityId: item.qualityId,
-                            designId: item.designId,
-                            matchingId: mq.matchingId,
-                            type: "Saree",
-                            cut: item.cut
-                        },
-                        {
-                            $inc: {
-                                totalSareeProduced: mq.challanQuantity,
-                                totalSareeOrdered: mq.challanQuantity
-                            }
-                        },
-                        { session }
-                    );
-                }
-            }
-        }
-
-        // Update order dispatch status
-        const order = await Order.findById(challan.orderId).session(session);
-        if (order) {
-            // Reverse dispatchedQuantity for each line item
-            for (const challanItem of challan.items) {
-                const orderItem = order.lineItems[challanItem.orderLineItemIndex];
-                if (orderItem) {
-                    if (challanItem.type === "Taka") {
-                        orderItem.dispatchedQuantity = Math.max(
-                            0,
-                            (orderItem.dispatchedQuantity || 0) - challanItem.challanQuantity
-                        );
-                    } else if (challanItem.matchingQuantities) {
-                        for (const mq of challanItem.matchingQuantities) {
-                            const orderMq = orderItem.matchingQuantities?.find(
-                                omq => omq.matchingId?.toString() === mq.matchingId?.toString()
-                            );
-                            if (orderMq) {
-                                orderMq.dispatchedQuantity = Math.max(
-                                    0,
-                                    (orderMq.dispatchedQuantity || 0) - mq.challanQuantity
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Recalculate dispatch status
-            const allDispatched = order.lineItems.every(item => {
-                if (item.matchingQuantities) {
-                    return item.matchingQuantities.every(
-                        mq => mq.dispatchedQuantity >= mq.quantity
-                    );
-                }
-                return item.dispatchedQuantity >= item.quantity;
-            });
-
-            const anyDispatched = order.lineItems.some(item => {
-                if (item.matchingQuantities) {
-                    return item.matchingQuantities.some(mq => mq.dispatchedQuantity > 0);
-                }
-                return item.dispatchedQuantity > 0;
-            });
-
-            if (allDispatched) {
-                order.dispatchStatus = "completed";
-                order.status = "completed";
-            } else if (anyDispatched) {
-                order.dispatchStatus = "partial";
-                order.status = "pending"; // Set back to pending if not fully dispatched
-            } else {
-                order.dispatchStatus = "pending";
-                order.status = "pending"; // Set back to pending if nothing dispatched
-            }
-
-            await order.save({ session });
-        }
-
-        // Delete the challan
-        await Challan.findByIdAndDelete(req.params.id, { session });
-
-        await session.commitTransaction();
-        res.json({ message: "Challan deleted successfully" });
-    } catch (error) {
-        await session.abortTransaction();
-        console.error("Error deleting challan:", error);
-        next(error);
-    } finally {
-        session.endSession();
-    }
-};

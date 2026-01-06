@@ -175,11 +175,11 @@ export const generateInventoryPDF = async (req, res, next) => {
 
                 // Track Quality Totals
                 let qTotalProduced = 0;
+                let qTotalProducedCount = 0;
                 let qTotalOrdered = 0;
-                let qTotalAvailable = 0; // Note: Mixing units (meters/pcs) is tricky for total. 
-                // Usually totals are separated by unit. 
-                // For simplicity, we'll try to sum numbers but if mixed types exist, it might be weird.
-                // Assuming a Quality is usually one Type (either Saree or Taka).
+                let qTotalOrderedCount = 0;
+                let qTotalAvailable = 0;
+                let qTotalAvailableCount = 0;
 
                 const isTakaQuality = items.some(i => i.type === "Taka");
                 const unit = isTakaQuality ? "m" : "pcs";
@@ -193,11 +193,6 @@ export const generateInventoryPDF = async (req, res, next) => {
                         drawTableHeader(doc, headers, startX, y, colWidths);
                         y += 20;
                         doc.font("Helvetica").fontSize(10);
-                        // Reset on new page so we don't draw line at very top if not needed, 
-                        // actually if we split a design across pages, it's fine. 
-                        // But if a new design starts at top of page, meaningful.
-                        // However, simpler to just reset or handle normally.
-                        // Let's just handle it normally.
                     }
 
                     const design = item.designId?.designNumber || "-";
@@ -215,13 +210,39 @@ export const generateInventoryPDF = async (req, res, next) => {
 
                     previousDesign = design;
 
-                    const prodVal = item.type === "Taka" ? item.totalMetersProduced : item.totalSareeProduced;
-                    const ordVal = item.type === "Taka" ? item.totalMetersOrdered : item.totalSareeOrdered;
-                    const availVal = item.type === "Taka" ? item.availableMeters : item.availableSaree;
+                    let prodDisplay, ordDisplay, availDisplay;
 
-                    qTotalProduced += (prodVal || 0);
-                    qTotalOrdered += (ordVal || 0);
-                    qTotalAvailable += (availVal || 0);
+                    if (item.type === "Taka") {
+                        const prodM = item.totalMetersProduced || 0;
+                        const prodC = item.totalTakaProduced || 0;
+                        const ordM = item.totalMetersOrdered || 0;
+                        const ordC = item.totalTakaOrdered || 0;
+                        const availM = item.availableMeters || 0;
+                        const availC = item.availableTaka || 0;
+
+                        qTotalProduced += prodM;
+                        qTotalProducedCount += prodC;
+                        qTotalOrdered += ordM;
+                        qTotalOrderedCount += ordC;
+                        qTotalAvailable += availM;
+                        qTotalAvailableCount += availC;
+
+                        prodDisplay = `${prodM.toFixed(2)}m (${prodC})`;
+                        ordDisplay = `${ordM.toFixed(2)}m (${ordC})`;
+                        availDisplay = `${availM.toFixed(2)}m (${availC})`;
+                    } else {
+                        const prod = item.totalSareeProduced || 0;
+                        const ord = item.totalSareeOrdered || 0;
+                        const avail = item.availableSaree || 0;
+
+                        qTotalProduced += prod;
+                        qTotalOrdered += ord;
+                        qTotalAvailable += avail;
+
+                        prodDisplay = `${prod} pcs`;
+                        ordDisplay = `${ord} pcs`;
+                        availDisplay = `${avail} pcs`;
+                    }
 
                     // Row
                     let x = startX;
@@ -230,11 +251,11 @@ export const generateInventoryPDF = async (req, res, next) => {
                     x += colWidths[0];
                     doc.text(matching, x, y, { width: colWidths[1] });
                     x += colWidths[1];
-                    doc.text(`${prodVal?.toFixed(2) || 0} ${unit}`, x, y, { width: colWidths[2], align: 'right' });
+                    doc.text(prodDisplay, x, y, { width: colWidths[2], align: 'right' });
                     x += colWidths[2];
-                    doc.text(`${ordVal?.toFixed(2) || 0} ${unit}`, x, y, { width: colWidths[3], align: 'right' });
+                    doc.text(ordDisplay, x, y, { width: colWidths[3], align: 'right' });
                     x += colWidths[3];
-                    doc.text(`${availVal?.toFixed(2) || 0} ${unit}`, x, y, { width: colWidths[4], align: 'right' });
+                    doc.text(availDisplay, x, y, { width: colWidths[4], align: 'right' });
 
                     y += 18;
                 });
@@ -249,11 +270,22 @@ export const generateInventoryPDF = async (req, res, next) => {
                 doc.text("Item Wise Total", tx, y, { width: colWidths[0] + colWidths[1] });
                 tx += colWidths[0] + colWidths[1];
 
-                doc.text(`${qTotalProduced.toFixed(2)} ${unit}`, tx, y, { width: colWidths[2], align: 'right' });
+                let totalProdDisplay, totalOrdDisplay, totalAvailDisplay;
+                if (isTakaQuality) {
+                    totalProdDisplay = `${qTotalProduced.toFixed(2)}m (${qTotalProducedCount})`;
+                    totalOrdDisplay = `${qTotalOrdered.toFixed(2)}m (${qTotalOrderedCount})`;
+                    totalAvailDisplay = `${qTotalAvailable.toFixed(2)}m (${qTotalAvailableCount})`;
+                } else {
+                    totalProdDisplay = `${qTotalProduced} pcs`;
+                    totalOrdDisplay = `${qTotalOrdered} pcs`;
+                    totalAvailDisplay = `${qTotalAvailable} pcs`;
+                }
+
+                doc.text(totalProdDisplay, tx, y, { width: colWidths[2], align: 'right' });
                 tx += colWidths[2];
-                doc.text(`${qTotalOrdered.toFixed(2)} ${unit}`, tx, y, { width: colWidths[3], align: 'right' });
+                doc.text(totalOrdDisplay, tx, y, { width: colWidths[3], align: 'right' });
                 tx += colWidths[3];
-                doc.text(`${qTotalAvailable.toFixed(2)} ${unit}`, tx, y, { width: colWidths[4], align: 'right' });
+                doc.text(totalAvailDisplay, tx, y, { width: colWidths[4], align: 'right' });
 
                 y += 25; // Gap before next quality
             });

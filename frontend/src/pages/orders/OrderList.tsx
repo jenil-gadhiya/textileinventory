@@ -528,7 +528,7 @@ export function OrderListPage() {
                                         <button
                                             onClick={() => setStatusFilter("all")}
                                             className={`px-3 py-1.5 text-xs rounded ${statusFilter === "all"
-                                                ? "bg-primary text-black"
+                                                ? "bg-blue-600 text-white"
                                                 : "bg-surface-200 text-muted hover:bg-surface-300"
                                                 }`}
                                         >

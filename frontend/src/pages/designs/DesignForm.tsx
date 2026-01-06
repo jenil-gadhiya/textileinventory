@@ -37,9 +37,9 @@ export function DesignFormPage() {
   };
 
   const updateInput = (id: string, value: string) => {
-    const numericValue = value.replace(/[^0-9]/g, "");
+    // Allow alphanumeric values
     setInputs((prev) =>
-      prev.map((input) => (input.id === id ? { ...input, value: numericValue } : input))
+      prev.map((input) => (input.id === id ? { ...input, value } : input))
     );
   };
 
@@ -96,21 +96,21 @@ export function DesignFormPage() {
     }
   };
 
-  
+
 
   return (
     <div className="space-y-6">
-        
+
       <PageHeader
         title="Add Design Numbers"
-        subtitle="Quickly add multiple design numbers. Type numbers and press TAB or ENTER to add more."
+        subtitle="Quickly add multiple design numbers. Type design numbers and press TAB or ENTER to add more."
       />
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <Card>
           <CardHeader>
             <div>
               <CardTitle>Design Numbers</CardTitle>
-              <CardDescription>Enter design numbers (numbers only). Press TAB or ENTER to add another.</CardDescription>
+              <CardDescription>Enter design numbers. Press TAB or ENTER to add another.</CardDescription>
             </div>
           </CardHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -131,12 +131,11 @@ export function DesignFormPage() {
                           inputRefs.current[input.id] = el;
                         }}
                         type="text"
-                        inputMode="numeric"
                         placeholder={`Design Number ${index + 1}`}
                         value={input.value}
                         onChange={(e) => updateInput(input.id, e.target.value)}
                         onKeyDown={(e) => handleKeyDown(input.id, e)}
-                        className="bg-background/50 border-border/50"
+                        className="bg-background text-foreground border-border/50"
                       />
                     </div>
                     {inputs.length > 1 && (

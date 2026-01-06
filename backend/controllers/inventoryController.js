@@ -93,11 +93,14 @@ export async function validateStockAvailability(lineItems, session) {
 
         if (type === "Taka") {
             // Validate Taka stock
-            const inventory = await Inventory.findOne({
+            const query = {
                 qualityId: item.qualityId,
                 designId: item.designId,
                 type: "Taka",
-            })
+            };
+            if (item.factoryId) query.factoryId = item.factoryId;
+
+            const inventory = await Inventory.findOne(query)
                 .populate("qualityId", "fabricName")
                 .populate("designId", "designNumber")
                 .session(session);
@@ -119,13 +122,16 @@ export async function validateStockAvailability(lineItems, session) {
             // Validate Saree stock - check each matching quantity
             if (item.matchingQuantities && item.matchingQuantities.length > 0) {
                 for (const mq of item.matchingQuantities) {
-                    const inventory = await Inventory.findOne({
+                    const query = {
                         qualityId: item.qualityId,
                         designId: item.designId,
                         matchingId: mq.matchingId,
                         type: "Saree",
                         cut: item.cut,
-                    })
+                    };
+                    if (item.factoryId) query.factoryId = item.factoryId;
+
+                    const inventory = await Inventory.findOne(query)
                         .populate("qualityId", "fabricName")
                         .populate("designId", "designNumber")
                         .populate("matchingId", "matchingName")
@@ -215,11 +221,14 @@ export async function reserveInventoryForOrder(lineItems, session = null) {
 
         if (type === "Taka") {
             // Find best inventory to reserve (this is just for tracking, doesn't lock specific items)
-            const candidates = await Inventory.find({
+            const query = {
                 qualityId: item.qualityId,
                 designId: item.designId,
                 type: "Taka",
-            }).sort({ availableMeters: -1 }).session(session);
+            };
+            if (item.factoryId) query.factoryId = item.factoryId;
+
+            const candidates = await Inventory.find(query).sort({ availableMeters: -1 }).session(session);
 
             const target = candidates[0]; // Pick best or undefined
 
@@ -244,13 +253,16 @@ export async function reserveInventoryForOrder(lineItems, session = null) {
 
         } else if (type === "Meter" || type === "Saree") {
             for (const mq of item.matchingQuantities || []) {
-                const candidates = await Inventory.find({
+                const query = {
                     qualityId: item.qualityId,
                     designId: item.designId,
                     matchingId: mq.matchingId,
                     type: "Saree",
                     cut: item.cut,
-                }).sort({ availableSaree: -1 }).session(session);
+                };
+                if (item.factoryId) query.factoryId = item.factoryId;
+
+                const candidates = await Inventory.find(query).sort({ availableSaree: -1 }).session(session);
 
                 let target = candidates[0];
 

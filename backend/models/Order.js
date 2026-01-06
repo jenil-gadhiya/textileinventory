@@ -16,6 +16,7 @@ const matchingQuantitySchema = new mongoose.Schema({
 const orderLineItemSchema = new mongoose.Schema({
     qualityId: { type: mongoose.Schema.Types.ObjectId, ref: "Quality" },
     designId: { type: mongoose.Schema.Types.ObjectId, ref: "Design" },
+    factoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Factory" },
     catalogType: { type: String, required: true, enum: ["Saree", "Taka"] },
 
     // For Saree mode

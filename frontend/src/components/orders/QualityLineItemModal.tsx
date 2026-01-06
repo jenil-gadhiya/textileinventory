@@ -15,12 +15,13 @@ interface Props {
 }
 
 export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Props) {
-    const { qualities } = useStockStore();
+    const { qualities, factories } = useStockStore();
 
     const [catalogType, setCatalogType] = useState<"Saree" | "Taka">("Saree");
     const [filteredQualities, setFilteredQualities] = useState<any[]>([]);
     const [qualityId, setQualityId] = useState("");
     const [designId, setDesignId] = useState("");
+    const [factoryId, setFactoryId] = useState("");
 
     // Saree mode fields
     const [availableDesigns, setAvailableDesigns] = useState<any[]>([]);
@@ -56,8 +57,13 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
             ? ((item.designId as any)._id || item.designId.id)
             : item.designId;
 
+        const fId = typeof item.factoryId === "object"
+            ? ((item.factoryId as any)._id || item.factoryId.id)
+            : item.factoryId;
+
         setQualityId(qId || "");
         setDesignId(dId || "");
+        setFactoryId(fId || "");
         setCatalogType(item.catalogType);
         setRate(item.rate);
 
@@ -74,6 +80,7 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
     const resetForm = () => {
         setQualityId("");
         setDesignId("");
+        setFactoryId("");
         setCatalogType("Saree");
         setFilteredQualities([]);
         setAvailableDesigns([]);
@@ -257,10 +264,16 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
     };
 
     const handleAddAndNext = () => {
+        if (!factoryId) {
+            alert("Please select a factory");
+            return;
+        }
         if (!qualityId || !designId) {
             alert("Please select quality and design");
             return;
         }
+
+        const selectedFactory = factories.find(f => f.id === factoryId);
 
         if (catalogType === "Saree") {
             const activeMatchings = matchingQuantities.filter((mq) => mq.quantity > 0);
@@ -276,10 +289,12 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
             // Find full objects for display
             const selectedQuality = filteredQualities.find(q => q.id === qualityId || q.id === parseInt(qualityId));
             const selectedDesign = availableDesigns.find(d => (d._id || d.id) === designId);
+            const selectedFactory = factories.find(f => f.id === factoryId);
 
             const lineItem: OrderLineItem = {
                 qualityId: selectedQuality || qualityId,
                 designId: selectedDesign || designId,
+                factoryId: selectedFactory || factoryId,
                 catalogType: "Saree",
                 quantityType: "Saree",
                 matchingQuantities: activeMatchings,
@@ -308,6 +323,7 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
             const lineItem: OrderLineItem = {
                 qualityId: selectedQuality || qualityId,
                 designId: selectedDesign || designId,
+                factoryId: selectedFactory || factoryId,
                 catalogType: "Taka",
                 quantityType,
                 quantity,
@@ -355,10 +371,16 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
     };
 
     const handleAdd = () => {
+        if (!factoryId) {
+            alert("Please select a factory");
+            return;
+        }
         if (!qualityId || !designId) {
             alert("Please select quality and design");
             return;
         }
+
+        const selectedFactory = factories.find(f => f.id === factoryId);
 
         if (catalogType === "Saree") {
             const activeMatchings = matchingQuantities.filter((mq) => mq.quantity > 0);
@@ -378,6 +400,7 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
             const lineItem: OrderLineItem = {
                 qualityId: selectedQuality || qualityId,
                 designId: selectedDesign || designId,
+                factoryId: selectedFactory || factoryId,
                 catalogType: "Saree",
                 quantityType: "Saree",
                 matchingQuantities: activeMatchings,
@@ -431,6 +454,24 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
                 </DialogHeader>
 
                 <div className="space-y-4">
+                    {/* Factory */}
+                    <div>
+                        <Label htmlFor="factory">Factory*</Label>
+                        <select
+                            id="factory"
+                            value={factoryId}
+                            onChange={(e) => setFactoryId(e.target.value)}
+                            className="flex h-11 w-full rounded-md border border-slate-200 dark:border-white/10 bg-surface-200 px-3 py-2 text-sm text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
+                        >
+                            <option value="">Select Factory</option>
+                            {factories.map((f) => (
+                                <option key={f.id} value={f.id}>
+                                    {f.factoryName}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
                     {/* Saree/Taka Toggle */}
                     <div>
                         <Label>Type*</Label>

@@ -161,6 +161,7 @@ export interface Broker {
 export interface OrderLineItem {
   qualityId: string | Quality;
   designId: string | Design;
+  factoryId?: string | Factory;
   catalogType: StockType;
 
   // For Saree

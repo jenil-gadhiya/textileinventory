@@ -128,10 +128,6 @@ export function OrderEntryPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!factoryId) {
-            alert("Please select a factory");
-            return;
-        }
 
         if (lineItems.length === 0) {
             alert("Please add at least one line item");
@@ -154,7 +150,8 @@ export function OrderEntryPage() {
                 matchingQuantities: item.matchingQuantities?.map(mq => ({
                     ...mq,
                     matchingId: typeof mq.matchingId === 'object' ? (mq.matchingId as any)._id : mq.matchingId
-                }))
+                })),
+                factoryId: typeof item.factoryId === 'object' ? (item.factoryId as any)._id : item.factoryId
             }));
 
             const payload: any = {
@@ -201,11 +198,13 @@ export function OrderEntryPage() {
         const design = item.designId && typeof item.designId === "object"
             ? `${(item.designId as any).designNumber}`
             : "";
+        const factory = item.factoryId && typeof item.factoryId === "object" ? (item.factoryId as any).factoryName : "Unknown Factory";
 
         if (item.catalogType === "Saree") {
             return {
                 quality,
                 design,
+                factory,
                 details: `${item.totalSaree} sarees × ${item.cut}m = ${item.totalMeters}m @ ₹${item.rate}/m`,
                 value: `₹${item.orderValue.toFixed(2)}`
             };
@@ -227,6 +226,7 @@ export function OrderEntryPage() {
             return {
                 quality,
                 design,
+                factory,
                 details,
                 value: `₹${item.orderValue.toFixed(2)}`
             };
@@ -274,23 +274,7 @@ export function OrderEntryPage() {
                                 </select>
                             </div>
 
-                            <div>
-                                <Label htmlFor="factory">Factory*</Label>
-                                <select
-                                    id="factory"
-                                    value={factoryId}
-                                    onChange={(e) => setFactoryId(e.target.value)}
-                                    className="flex h-11 w-full rounded-md border border-slate-200 dark:border-white/10 bg-surface-200 px-3 py-2 text-sm text-body ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan focus-visible:ring-offset-2"
-                                    required
-                                >
-                                    <option value="">Select Factory</option>
-                                    {factories.map((f) => (
-                                        <option key={f.id} value={f.id}>
-                                            {f.factoryName}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+
 
                             <div>
                                 <Label htmlFor="broker">Broker</Label>
@@ -381,6 +365,7 @@ export function OrderEntryPage() {
                                             <thead className="bg-surface-100">
                                                 <tr>
                                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-muted">Quality</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-muted">Factory</th>
                                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-muted">Design</th>
                                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-muted">Details</th>
                                                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-muted">Value</th>
@@ -393,6 +378,7 @@ export function OrderEntryPage() {
                                                     return (
                                                         <tr key={index} className="hover:bg-surface-100">
                                                             <td className="px-4 py-3 text-sm text-body">{display.quality}</td>
+                                                            <td className="px-4 py-3 text-sm text-body">{display.factory}</td>
                                                             <td className="px-4 py-3 text-sm text-body">{display.design}</td>
                                                             <td className="px-4 py-3 text-sm text-body">{display.details}</td>
                                                             <td className="px-4 py-3 text-sm text-right font-semibold text-body">
@@ -441,6 +427,7 @@ export function OrderEntryPage() {
 
                                                 <div className="pr-8">
                                                     <h4 className="font-semibold text-body">{display.quality}</h4>
+                                                    <p className="text-sm text-muted">{display.factory}</p>
                                                     <p className="text-sm text-muted">{display.design}</p>
                                                 </div>
 

@@ -296,6 +296,7 @@ export async function reserveInventoryForOrder(lineItems, session = null) {
 }
 
 // DELETE /api/inventory/:id
+// DELETE /api/inventory/:id
 export const deleteInventory = async (req, res, next) => {
     try {
         const inventory = await Inventory.findByIdAndDelete(req.params.id);
@@ -306,6 +307,263 @@ export const deleteInventory = async (req, res, next) => {
 
         res.json({ message: "Inventory item deleted successfully", id: req.params.id });
     } catch (error) {
+        next(error);
+    }
+};
+
+// POST /api/inventory/recalculate
+export const recalculateInventory = async (req, res, next) => {
+    try {
+        // Dynamic imports to avoid circular deps or bloat if not needed
+        const { Production } = await import("../models/Production.js");
+        const { Challan } = await import("../models/Challan.js");
+        const { Order } = await import("../models/Order.js");
+        const { StockPiece } = await import("../models/StockPiece.js");
+
+        console.log("[Recalculate] Starting full inventory recalculation...");
+
+        // 1. Fetch Data
+        const productions = await Production.find({});
+        const challans = await Challan.find({});
+        const orders = await Order.find({ status: { $ne: "completed" } }); // Only pending/partial orders contribute to Reserved
+
+        console.log(`[Recalculate] Fetched ${productions.length} productions, ${challans.length} challans, ${orders.length} active orders.`);
+
+        // 2. Build Inventory Map
+        const invMap = {}; // inventoryId -> { doc, calculated: { ... } }
+        const keyToIds = {}; // key -> [inventoryId]
+
+        const getInvKey = (type, q, d, f, m, cut) => {
+            return `${type}|${q}|${d || ''}|${f || ''}|${m || ''}|${cut || ''}`;
+        };
+
+        const allInventory = await Inventory.find({});
+        for (const inv of allInventory) {
+            invMap[inv._id.toString()] = {
+                doc: inv,
+                calculated: {
+                    totalMetersProduced: 0,
+                    totalTakaProduced: 0,
+                    totalSareeProduced: 0,
+                    totalMetersOrdered: 0,
+                    totalTakaOrdered: 0,
+                    totalSareeOrdered: 0
+                }
+            };
+
+            const key = getInvKey(
+                inv.type,
+                inv.qualityId?.toString(),
+                inv.designId?.toString(),
+                inv.factoryId?.toString(),
+                inv.matchingId?.toString(),
+                inv.cut
+            );
+            if (!keyToIds[key]) keyToIds[key] = [];
+            keyToIds[key].push(inv._id.toString());
+        }
+
+        // 3. Process Productions
+        for (const p of productions) {
+            let key = "";
+            let qtyMeters = p.totalMeters || 0;
+            let qtyTaka = p.takaDetails ? p.takaDetails.length : 0;
+
+            if (p.stockType === "Taka" || p.stockType === "Taka-Pic") {
+                key = getInvKey("Taka", p.qualityId?.toString(), p.designId?.toString(), p.factoryId?.toString(), null, null);
+                const ids = keyToIds[key];
+                if (ids && ids.length > 0) {
+                    invMap[ids[0]].calculated.totalMetersProduced += qtyMeters;
+                    invMap[ids[0]].calculated.totalTakaProduced += qtyTaka;
+                }
+            } else if (p.stockType === "Saree") {
+                for (const mq of p.matchingQuantities) {
+                    key = getInvKey("Saree", p.qualityId?.toString(), p.designId?.toString(), p.factoryId?.toString(), mq.matchingId?.toString(), p.cut);
+                    const ids = keyToIds[key];
+                    if (ids && ids.length > 0) {
+                        invMap[ids[0]].calculated.totalSareeProduced += (mq.quantity || 0);
+                    }
+                }
+            }
+        }
+
+        // 4. Process Challans
+        for (const c of challans) {
+            for (const item of c.items) {
+                const type = item.type;
+                let toDeduct = item.challanQuantity || 0;
+                let toDeductTaka = item.selectedPieces ? item.selectedPieces.length : 0;
+
+                const baseValues = Object.values(invMap).map(x => x).filter(data => {
+                    const i = data.doc;
+                    if (type === "Taka") {
+                        return i.type === "Taka" &&
+                            i.qualityId?.toString() === item.qualityId?.toString() &&
+                            i.designId?.toString() === item.designId?.toString();
+                    }
+                    return false;
+                });
+
+                if (type === "Taka") {
+                    let matchingCandidates = baseValues.sort((a, b) => b.calculated.totalMetersProduced - a.calculated.totalMetersProduced);
+
+                    for (const cand of matchingCandidates) {
+                        if (toDeduct <= 0) break;
+                        const available = cand.calculated.totalMetersProduced;
+                        const taking = Math.min(available, toDeduct);
+                        if (taking > 0) {
+                            cand.calculated.totalMetersProduced -= taking;
+                            const piecesTaking = (toDeductTaka > 0 && item.challanQuantity > 0)
+                                ? Math.ceil((taking / item.challanQuantity) * toDeductTaka)
+                                : 0;
+                            cand.calculated.totalTakaProduced -= piecesTaking;
+                            toDeduct -= taking;
+                            toDeductTaka -= piecesTaking;
+                        }
+                    }
+                } else if (type === "Saree") {
+                    for (const mq of item.matchingQuantities || []) {
+                        let mqDeduct = mq.challanQuantity || 0;
+                        let mqCandidates = Object.values(invMap).filter(data => {
+                            const i = data.doc;
+                            return i.type === "Saree" &&
+                                i.qualityId?.toString() === item.qualityId?.toString() &&
+                                i.designId?.toString() === item.designId?.toString() &&
+                                i.matchingId?.toString() === mq.matchingId?.toString() &&
+                                i.cut === item.cut;
+                        }).sort((a, b) => b.calculated.totalSareeProduced - a.calculated.totalSareeProduced);
+
+                        for (const cand of mqCandidates) {
+                            if (mqDeduct <= 0) break;
+                            const available = cand.calculated.totalSareeProduced;
+                            const taking = Math.min(available, mqDeduct);
+                            if (taking > 0) {
+                                cand.calculated.totalSareeProduced -= taking;
+                                mqDeduct -= taking;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. Process Orders
+        for (const o of orders) {
+            for (const item of o.lineItems) {
+                const type = item.quantityType || item.catalogType;
+                let pendingQty = 0;
+
+                if (type === "Taka") {
+                    pendingQty = Math.max(0, (item.quantity || 0) - (item.dispatchedQuantity || 0));
+
+                    if (pendingQty > 0) {
+                        const qId = item.qualityId?.toString();
+                        const dId = item.designId?.toString();
+                        const fId = item.factoryId?.toString();
+
+                        let candidates = Object.values(invMap).filter(data => {
+                            const i = data.doc;
+                            return i.type === "Taka" &&
+                                i.qualityId?.toString() === qId &&
+                                i.designId?.toString() === dId &&
+                                (!fId || i.factoryId?.toString() === fId);
+                        }).sort((a, b) => {
+                            const availA = a.calculated.totalMetersProduced - a.calculated.totalMetersOrdered;
+                            const availB = b.calculated.totalMetersProduced - b.calculated.totalMetersOrdered;
+                            return availB - availA;
+                        });
+
+                        if (candidates.length > 0) {
+                            candidates[0].calculated.totalMetersOrdered += pendingQty;
+                        }
+                    }
+                } else {
+                    for (const mq of item.matchingQuantities) {
+                        pendingQty = Math.max(0, (mq.quantity || 0) - (mq.dispatchedQuantity || 0));
+                        if (pendingQty > 0) {
+                            const qId = item.qualityId?.toString();
+                            const dId = item.designId?.toString();
+                            const fId = item.factoryId?.toString();
+                            const mId = mq.matchingId?.toString();
+                            const cut = item.cut;
+
+                            let candidates = Object.values(invMap).filter(data => {
+                                const i = data.doc;
+                                return i.type === "Saree" &&
+                                    i.qualityId?.toString() === qId &&
+                                    i.designId?.toString() === dId &&
+                                    i.matchingId?.toString() === mId &&
+                                    i.cut === cut &&
+                                    (!fId || i.factoryId?.toString() === fId);
+                            }).sort((a, b) => {
+                                const availA = a.calculated.totalSareeProduced - a.calculated.totalSareeOrdered;
+                                const availB = b.calculated.totalSareeProduced - b.calculated.totalSareeOrdered;
+                                return availB - availA;
+                            });
+
+                            if (candidates.length > 0) {
+                                candidates[0].calculated.totalSareeOrdered += pendingQty;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 6. Write Changes
+        let updatedCount = 0;
+        for (const id in invMap) {
+            const { doc, calculated } = invMap[id];
+
+            // Normalize
+            calculated.totalMetersProduced = Math.max(0, calculated.totalMetersProduced);
+            calculated.totalTakaProduced = Math.max(0, calculated.totalTakaProduced);
+            calculated.totalSareeProduced = Math.max(0, calculated.totalSareeProduced);
+            calculated.totalMetersOrdered = Math.max(0, calculated.totalMetersOrdered);
+            calculated.totalSareeOrdered = Math.max(0, calculated.totalSareeOrdered);
+
+            if (doc.totalMetersProduced !== calculated.totalMetersProduced ||
+                doc.totalTakaProduced !== calculated.totalTakaProduced ||
+                doc.totalSareeProduced !== calculated.totalSareeProduced ||
+                doc.totalMetersOrdered !== calculated.totalMetersOrdered ||
+                doc.totalSareeOrdered !== calculated.totalSareeOrdered ||
+                doc.totalTakaOrdered !== 0) {
+
+                await Inventory.findByIdAndUpdate(id, {
+                    totalMetersProduced: calculated.totalMetersProduced,
+                    totalTakaProduced: calculated.totalTakaProduced,
+                    totalSareeProduced: calculated.totalSareeProduced,
+                    totalMetersOrdered: calculated.totalMetersOrdered,
+                    totalTakaOrdered: 0,
+                    totalSareeOrdered: calculated.totalSareeOrdered
+                });
+                updatedCount++;
+            }
+        }
+
+        // 7. Sync StockPieces
+        const r1 = await StockPiece.updateMany(
+            { challanId: null, status: { $ne: "Available" } },
+            { status: "Available" }
+        );
+        const r2 = await StockPiece.updateMany(
+            { challanId: { $ne: null }, status: { $ne: "Sold" } },
+            { status: "Sold" }
+        );
+
+        console.log(`[Recalculate] Updated ${updatedCount} inventory records. Sync: ${r1.modifiedCount} Available, ${r2.modifiedCount} Sold.`);
+
+        res.json({
+            message: "Inventory recalculation completed successfully",
+            stats: {
+                updatedInventoryCount: updatedCount,
+                syncedAvailable: r1.modifiedCount,
+                syncedSold: r2.modifiedCount
+            }
+        });
+
+    } catch (error) {
+        console.error("Recalculation Error:", error);
         next(error);
     }
 };

@@ -414,16 +414,18 @@ export function ProductionEntryPage() {
 
                     if (stockType === "Taka") {
                         const currentIndex = takaAvailableDesigns.findIndex(d => (d._id || d.id) === takaDesignId);
-                        if (currentIndex !== -1 && currentIndex < takaAvailableDesigns.length - 1) {
-                            const nextDesign = takaAvailableDesigns[currentIndex + 1];
+                        if (currentIndex !== -1 && takaAvailableDesigns.length > 0) {
+                            const nextIndex = (currentIndex + 1) % takaAvailableDesigns.length;
+                            const nextDesign = takaAvailableDesigns[nextIndex];
                             nextDesignId = nextDesign._id || nextDesign.id;
                             nextDesignNumber = nextDesign.designNumber;
                             hasNext = true;
                         }
                     } else {
                         const currentIndex = availableDesigns.findIndex(d => (d._id || d.id) === designId);
-                        if (currentIndex !== -1 && currentIndex < availableDesigns.length - 1) {
-                            const nextDesign = availableDesigns[currentIndex + 1];
+                        if (currentIndex !== -1 && availableDesigns.length > 0) {
+                            const nextIndex = (currentIndex + 1) % availableDesigns.length;
+                            const nextDesign = availableDesigns[nextIndex];
                             nextDesignId = nextDesign._id || nextDesign.id;
                             nextDesignNumber = nextDesign.designNumber;
                             hasNext = true;

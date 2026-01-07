@@ -720,7 +720,7 @@ export function ProductionEntryPage() {
                                                                         const val = parseInt(e.target.value) || 0;
                                                                         if (matchingQuantities.length > 0) {
                                                                             const firstMq = matchingQuantities[0];
-                                                                            const mId = typeof firstMq.matchingId === 'object'
+                                                                            const mId = firstMq.matchingId && typeof firstMq.matchingId === 'object'
                                                                                 ? (firstMq.matchingId as any)._id || (firstMq.matchingId as any).id
                                                                                 : firstMq.matchingId;
                                                                             handleMatchingQuantityChange(mId, val);

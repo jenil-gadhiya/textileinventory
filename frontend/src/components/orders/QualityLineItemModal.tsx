@@ -557,7 +557,7 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
                     {/* SAREE MODE */}
                     {catalogType === "Saree" && designId && matchingQuantities.length > 0 && (
                         (() => {
-                            const selectedQuality = qualities.find(q => q.id === qualityId || q.id === parseInt(qualityId));
+                            const selectedQuality = qualities.find(q => String(q.id) === String(qualityId));
                             const isGreyFabric = selectedQuality?.fabricType?.toLowerCase() === "grey";
 
                             return (
@@ -574,7 +574,7 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
                                                         const val = parseInt(e.target.value) || 0;
                                                         if (matchingQuantities.length > 0) {
                                                             const firstMq = matchingQuantities[0];
-                                                            const mId = typeof firstMq.matchingId === 'object'
+                                                            const mId = firstMq.matchingId && typeof firstMq.matchingId === 'object'
                                                                 ? (firstMq.matchingId as any)._id || (firstMq.matchingId as any).id
                                                                 : firstMq.matchingId as unknown as string;
                                                             handleMatchingQuantityChange(mId, val);

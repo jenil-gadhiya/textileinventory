@@ -525,7 +525,7 @@ export function ChallanCreatePage() {
 
             const payload = {
                 orderId: getOrderId(selectedOrder),
-                partyId: typeof selectedOrder.partyId === "object" ? (selectedOrder.partyId as any)._id || (selectedOrder.partyId as any).id : selectedOrder.partyId,
+                partyId: selectedOrder.partyId && typeof selectedOrder.partyId === "object" ? (selectedOrder.partyId as any)._id || (selectedOrder.partyId as any).id : selectedOrder.partyId,
                 challanDate,
                 items: transformedItems,
                 remarks,
@@ -868,7 +868,7 @@ export function ChallanCreatePage() {
 
                                                                 return item.matchingQuantities?.map((mq, mqIdx) => {
                                                                     const matchingName = orderItem.matchingQuantities?.[mqIdx];
-                                                                    const name = matchingName && typeof matchingName.matchingId === "object"
+                                                                    const name = matchingName && matchingName.matchingId && typeof matchingName.matchingId === "object"
                                                                         ? (matchingName.matchingId as any).matchingName
                                                                         : "";
 

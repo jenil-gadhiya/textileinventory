@@ -710,23 +710,13 @@ export function ProductionEntryPage() {
                                                 <>
                                                     {isGreyFabric ? (
                                                         <div className="space-y-4 pt-2">
-                                                            <div className="grid grid-cols-2 gap-4">
-                                                                <div>
-                                                                    <Label>Cut (Meters)</Label>
-                                                                    <Input
-                                                                        value={cut || "0"}
-                                                                        readOnly
-                                                                        className="bg-surface-300 text-muted"
-                                                                    />
-                                                                </div>
-                                                                <div>
-                                                                    <Label>Total Meters (Est.)</Label>
-                                                                    <Input
-                                                                        value={calculateSareeTotalMeters().toFixed(2) || "0"}
-                                                                        readOnly
-                                                                        className="bg-surface-300 text-muted"
-                                                                    />
-                                                                </div>
+                                                            <div>
+                                                                <Label>Cut (Meters)</Label>
+                                                                <Input
+                                                                    value={cut || "0"}
+                                                                    readOnly
+                                                                    className="bg-surface-300 text-muted"
+                                                                />
                                                             </div>
                                                             <div>
                                                                 <Label>Total Pcs</Label>

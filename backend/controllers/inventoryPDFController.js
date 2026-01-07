@@ -76,7 +76,7 @@ export const generateInventoryPDF = async (req, res, next) => {
         }, {});
 
         // Generate PDF
-        const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' });
+        const doc = new PDFDocument({ margin: 30, size: 'A4' }); // Portrait Mode
 
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", `inline; filename=stock-report-${Date.now()}.pdf`);
@@ -84,42 +84,20 @@ export const generateInventoryPDF = async (req, res, next) => {
         doc.pipe(res);
 
         // Header
-        doc.fontSize(20).text("Stock Report", { align: "center" });
-        doc.moveDown(0.5);
-
         const dateText = (fromDate && toDate)
-            ? `Filter Period: ${new Date(fromDate).toLocaleDateString()} to ${new Date(toDate).toLocaleDateString()}`
-            : `Generated on: ${new Date().toLocaleDateString()}`;
-        doc.fontSize(10).text(dateText, { align: "center" });
-        doc.moveDown();
+            ? `Period: ${new Date(fromDate).toLocaleDateString()} to ${new Date(toDate).toLocaleDateString()}`
+            : `Date: ${new Date().toLocaleDateString()}`;
 
-        // Totals Section (Keep existing totals logic)
-        let y = doc.y;
-        const boxWidth = 350;
-        const boxHeight = 60;
+        // Title Left, Date Right
+        doc.font("Helvetica-Bold").fontSize(18).text("Stock Report", 30, 40);
+        doc.font("Helvetica").fontSize(10).text(dateText, 30, 48, { align: "right" });
 
-        if (hasTaka || hasSaree) {
-            doc.fontSize(10);
-            if (hasTaka && !hasSaree) {
-                drawTotalsBox(doc, (doc.page.width - boxWidth) / 2, y, boxWidth, boxHeight, "Taka Totals", takaStats, "Taka");
-                y += boxHeight + 20;
-            } else if (!hasTaka && hasSaree) {
-                drawTotalsBox(doc, (doc.page.width - boxWidth) / 2, y, boxWidth, boxHeight, "Saree Totals", sareeStats, "Saree");
-                y += boxHeight + 20;
-            } else {
-                const gap = 20;
-                const startX = (doc.page.width - (boxWidth * 2 + gap)) / 2;
-                drawTotalsBox(doc, startX, y, boxWidth, boxHeight, "Taka Totals", takaStats, "Taka");
-                drawTotalsBox(doc, startX + boxWidth + gap, y, boxWidth, boxHeight, "Saree Totals", sareeStats, "Saree");
-                y += boxHeight + 20;
-            }
-        }
+        let y = 80;
 
-        // Table Constants - Updated columns (Removed Quality, Removed Type)
-        // Table Constants - Updated columns for Landscape usage
+        // Table Constants - Portrait Compact Columns (Total ~535)
         const startX = 30;
-        // Cols: Design (180), Matching (180), Produced (140), Ordered (140), Available (140) => Total 780
-        const colWidths = [180, 180, 140, 140, 140];
+        // Cols: Design (125), Matching (125), Produced (95), Ordered (95), Available (95)
+        const colWidths = [125, 125, 95, 95, 95];
         const headers = ["Design", "Matching", "Produced", "Ordered", "Available"];
         const tableWidth = colWidths.reduce((a, b) => a + b, 0);
 
@@ -296,6 +274,36 @@ export const generateInventoryPDF = async (req, res, next) => {
             // Gap before next factory
             y += 10;
         });
+
+        // Grand Total Logic (Only if multiple qualities exist)
+        const uniqueQualitiesCount = new Set(processedItems.map(i => i.qualityId?.fabricName)).size;
+
+        if (uniqueQualitiesCount > 1) {
+            if (y + 100 > doc.page.height - 30) {
+                doc.addPage();
+                y = 50;
+            }
+
+            y += 20;
+            doc.font("Helvetica-Bold").fontSize(14).text("Grand Total", 30, y);
+            y += 25;
+
+            const boxWidth = 350;
+            const boxHeight = 60;
+
+            if (hasTaka) {
+                drawTotalsBox(doc, 30, y, boxWidth, boxHeight, "Taka Grand Total", takaStats, "Taka");
+                y += boxHeight + 20;
+            }
+            if (hasSaree) {
+                // Check page break again
+                if (y + boxHeight > doc.page.height - 30) {
+                    doc.addPage();
+                    y = 50;
+                }
+                drawTotalsBox(doc, 30, y, boxWidth, boxHeight, "Saree Grand Total", sareeStats, "Saree");
+            }
+        }
 
         doc.end();
 

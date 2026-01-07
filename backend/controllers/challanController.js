@@ -520,7 +520,11 @@ async function updateOrderDispatchStatus(orderId, challanItems) {
             } else {
                 for (const challanMq of challanItem.matchingQuantities || []) {
                     const orderMq = orderItem.matchingQuantities.find(
-                        (mq) => mq.matchingId.toString() === challanMq.matchingId.toString()
+                        (mq) => {
+                            if (!mq.matchingId && !challanMq.matchingId) return true;
+                            if (!mq.matchingId || !challanMq.matchingId) return false;
+                            return mq.matchingId.toString() === challanMq.matchingId.toString();
+                        }
                     );
                     if (orderMq) {
                         orderMq.dispatchedQuantity =

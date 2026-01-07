@@ -204,6 +204,14 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
                     }
                 });
 
+                if (matchingMap.size === 0) {
+                    matchingMap.set("standard_matching", {
+                        matchingId: null as unknown as string,
+                        matchingName: "Standard",
+                        quantity: 0
+                    });
+                }
+
                 setMatchingQuantities(Array.from(matchingMap.values()));
                 setCut(designEntries[0].cut || 0);
             } else {
@@ -548,87 +556,141 @@ export function QualityLineItemModal({ isOpen, onClose, onAdd, editingItem }: Pr
 
                     {/* SAREE MODE */}
                     {catalogType === "Saree" && designId && matchingQuantities.length > 0 && (
-                        <>
-                            <div className="space-y-3">
-                                <h3 className="font-semibold text-lg">Matching Quantities</h3>
-                                {matchingQuantities.map((mq) => {
-                                    const mId = mq.matchingId as unknown as string;
-                                    return (
-                                        <div key={mId}>
-                                            <Label htmlFor={`matching - ${mId} `}>
-                                                {mq.matchingName}
-                                            </Label>
-                                            <Input
-                                                id={`matching - ${mId} `}
-                                                type="number"
-                                                min="0"
-                                                value={mq.quantity}
-                                                onChange={(e) =>
-                                                    handleMatchingQuantityChange(
-                                                        mId,
-                                                        parseInt(e.target.value) || 0
-                                                    )
-                                                }
-                                                placeholder="0"
-                                            />
+                        (() => {
+                            const selectedQuality = qualities.find(q => q.id === qualityId || q.id === parseInt(qualityId));
+                            const isGreyFabric = selectedQuality?.fabricType?.toLowerCase() === "grey";
+
+                            return (
+                                <>
+                                    {isGreyFabric ? (
+                                        <div className="space-y-4 pt-2">
+                                            <div>
+                                                <Label>Quantity (Pcs)*</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="0"
+                                                    value={calculateSareeTotalSaree() || ""}
+                                                    onChange={(e) => {
+                                                        const val = parseInt(e.target.value) || 0;
+                                                        if (matchingQuantities.length > 0) {
+                                                            const firstMq = matchingQuantities[0];
+                                                            const mId = typeof firstMq.matchingId === 'object'
+                                                                ? (firstMq.matchingId as any)._id || (firstMq.matchingId as any).id
+                                                                : firstMq.matchingId as unknown as string;
+                                                            handleMatchingQuantityChange(mId, val);
+                                                        }
+                                                    }}
+                                                    placeholder="Enter quantity"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <Label htmlFor="saree-rate">Rate*</Label>
+                                                <Input
+                                                    id="saree-rate"
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={rate}
+                                                    onChange={(e) => setRate(parseFloat(e.target.value) || 0)}
+                                                    placeholder="0.00"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <Label>Order Value</Label>
+                                                <Input
+                                                    value={`₹${calculateSareeOrderValue().toFixed(2)} `}
+                                                    readOnly
+                                                    className="bg-surface-300 font-semibold"
+                                                />
+                                            </div>
                                         </div>
-                                    );
-                                })}
-                            </div>
+                                    ) : (
+                                        <>
+                                            <div className="space-y-3">
+                                                <h3 className="font-semibold text-lg">Matching Quantities</h3>
+                                                {matchingQuantities.map((mq) => {
+                                                    const mId = mq.matchingId as unknown as string;
+                                                    return (
+                                                        <div key={mId}>
+                                                            <Label htmlFor={`matching - ${mId} `}>
+                                                                {mq.matchingName}
+                                                            </Label>
+                                                            <Input
+                                                                id={`matching - ${mId} `}
+                                                                type="number"
+                                                                min="0"
+                                                                value={mq.quantity}
+                                                                onChange={(e) =>
+                                                                    handleMatchingQuantityChange(
+                                                                        mId,
+                                                                        parseInt(e.target.value) || 0
+                                                                    )
+                                                                }
+                                                                placeholder="0"
+                                                            />
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
 
-                            <div>
-                                <Label htmlFor="cut">Cut*</Label>
-                                <Input
-                                    id="cut"
-                                    type="number"
-                                    step="0.01"
-                                    value={cut}
-                                    onChange={(e) => setCut(parseFloat(e.target.value) || 0)}
-                                    placeholder="0.00"
-                                    readOnly
-                                    className="bg-surface-300"
-                                />
-                            </div>
+                                            <div>
+                                                <Label htmlFor="cut">Cut*</Label>
+                                                <Input
+                                                    id="cut"
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={cut}
+                                                    onChange={(e) => setCut(parseFloat(e.target.value) || 0)}
+                                                    placeholder="0.00"
+                                                    readOnly
+                                                    className="bg-surface-300"
+                                                />
+                                            </div>
 
-                            <div>
-                                <Label>Total Saree</Label>
-                                <Input
-                                    value={calculateSareeTotalSaree()}
-                                    readOnly
-                                    className="bg-surface-300"
-                                />
-                            </div>
+                                            <div>
+                                                <Label>Total Saree</Label>
+                                                <Input
+                                                    value={calculateSareeTotalSaree()}
+                                                    readOnly
+                                                    className="bg-surface-300"
+                                                />
+                                            </div>
 
-                            <div>
-                                <Label>Total Meters</Label>
-                                <Input
-                                    value={calculateSareeTotalMeters().toFixed(2)}
-                                    readOnly
-                                    className="bg-surface-300"
-                                />
-                            </div>
+                                            <div>
+                                                <Label>Total Meters</Label>
+                                                <Input
+                                                    value={calculateSareeTotalMeters().toFixed(2)}
+                                                    readOnly
+                                                    className="bg-surface-300"
+                                                />
+                                            </div>
 
-                            <div>
-                                <Label htmlFor="saree-rate">Rate*</Label>
-                                <Input
-                                    id="saree-rate"
-                                    type="number"
-                                    step="0.01"
-                                    value={rate}
-                                    onChange={(e) => setRate(parseFloat(e.target.value) || 0)}
-                                    placeholder="0.00"
-                                />
-                            </div>
+                                            <div>
+                                                <Label htmlFor="saree-rate">Rate*</Label>
+                                                <Input
+                                                    id="saree-rate"
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={rate}
+                                                    onChange={(e) => setRate(parseFloat(e.target.value) || 0)}
+                                                    placeholder="0.00"
+                                                />
+                                            </div>
 
-                            <div>
-                                <Label>Order Value</Label>
-                                <Input
-                                    value={`₹${calculateSareeOrderValue().toFixed(2)} `}
-                                    readOnly
-                                    className="bg-surface-300 font-semibold"
-                                />
-                            </div>
-                        </>
+                                            <div>
+                                                <Label>Order Value</Label>
+                                                <Input
+                                                    value={`₹${calculateSareeOrderValue().toFixed(2)} `}
+                                                    readOnly
+                                                    className="bg-surface-300 font-semibold"
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+                                </>
+                            );
+                        })()
                     )}
 
                     {/* TAKA MODE */}

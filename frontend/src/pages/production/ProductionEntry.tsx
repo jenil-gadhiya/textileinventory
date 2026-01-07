@@ -49,6 +49,8 @@ export function ProductionEntryPage() {
         }
     }, [id, isEditMode]);
 
+
+
     const loadProductionData = async () => {
         try {
             setLoading(true);
@@ -196,6 +198,23 @@ export function ProductionEntryPage() {
                         }
                     }
                 });
+
+                // If no matchings found (e.g. Grey fabric), create a default 'Standard' matching
+                if (matchingMap.size === 0) {
+                    // Check if current designEntries imply we should have one (i.e. we found catalog entries)
+                    // Synthesize a matching
+                    let existingQty = 0;
+                    if (existingQuantities && existingQuantities.length > 0) {
+                        existingQty = existingQuantities[0].quantity;
+                    }
+
+                    matchingMap.set("standard_matching", {
+                        matchingId: null as any,
+                        matchingName: "Standard",
+                        quantity: existingQty
+                    });
+                }
+
                 setMatchingQuantities(Array.from(matchingMap.values()));
 
                 // Get cut from first entry of this design
@@ -683,72 +702,111 @@ export function ProductionEntryPage() {
                                             </select>
                                         </div>
 
-                                        {matchingQuantities.length > 0 && (
-                                            <div className="space-y-4">
-                                                <h3 className="font-semibold text-lg">Matching Quantities</h3>
-                                                {matchingQuantities.map((mq, idx) => {
-                                                    if (!mq) return null;
-                                                    const mId = typeof mq.matchingId === 'object'
-                                                        ? (mq.matchingId as any)._id || (mq.matchingId as any).id
-                                                        : mq.matchingId;
+                                        {(() => {
+                                            const selectedQuality = qualities.find(q => q.id === qualityId);
+                                            const isGreyFabric = selectedQuality?.fabricType?.toLowerCase() === "grey";
 
-                                                    // Fallback key if mId is missing (shouldn't happen but prevents crash)
-                                                    const key = mId || `mq-${idx}`;
-
-                                                    return (
-                                                        <div key={key}>
-                                                            <Label htmlFor={`matching-${key}`}>
-                                                                {mq.matchingName || "Unknown Matching"}
-                                                            </Label>
-                                                            <Input
-                                                                id={`matching-${key}`}
-                                                                type="number"
-                                                                min="0"
-                                                                value={mq.quantity}
-                                                                onChange={(e) =>
-                                                                    handleMatchingQuantityChange(
-                                                                        mId,
-                                                                        parseInt(e.target.value) || 0
-                                                                    )
-                                                                }
-                                                                placeholder="0"
-                                                            />
+                                            return (
+                                                <>
+                                                    {isGreyFabric ? (
+                                                        <div className="space-y-4 pt-2">
+                                                            <div>
+                                                                <Label>Total Pcs</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={calculateSareeTotalSaree() || ""}
+                                                                    onChange={(e) => {
+                                                                        const val = parseInt(e.target.value) || 0;
+                                                                        if (matchingQuantities.length > 0) {
+                                                                            const firstMq = matchingQuantities[0];
+                                                                            const mId = typeof firstMq.matchingId === 'object'
+                                                                                ? (firstMq.matchingId as any)._id || (firstMq.matchingId as any).id
+                                                                                : firstMq.matchingId;
+                                                                            handleMatchingQuantityChange(mId, val);
+                                                                        }
+                                                                    }}
+                                                                    placeholder="Enter total pieces"
+                                                                    className="bg-surface-200"
+                                                                />
+                                                                {matchingQuantities.length === 0 && (
+                                                                    <p className="text-xs text-red-400 mt-1">
+                                                                        No matching found in catalog. Please check design setup.
+                                                                    </p>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
+                                                    ) : (
+                                                        <>
+                                                            {matchingQuantities.length > 0 && (
+                                                                <div className="space-y-4">
+                                                                    <h3 className="font-semibold text-lg">Matching Quantities</h3>
+                                                                    {matchingQuantities.map((mq, idx) => {
+                                                                        if (!mq) return null;
+                                                                        const mId = typeof mq.matchingId === 'object'
+                                                                            ? (mq.matchingId as any)._id || (mq.matchingId as any).id
+                                                                            : mq.matchingId;
+                                                                        const key = mId || `mq-${idx}`;
 
-                                        <div>
-                                            <Label htmlFor="cut">Cut*</Label>
-                                            <Input
-                                                id="cut"
-                                                type="number"
-                                                step="0.01"
-                                                value={cut}
-                                                onChange={(e) => setCut(parseFloat(e.target.value) || 0)}
-                                                placeholder="0.00"
-                                                required
-                                            />
-                                        </div>
+                                                                        return (
+                                                                            <div key={key}>
+                                                                                <Label htmlFor={`matching-${key}`}>
+                                                                                    {mq.matchingName || "Unknown Matching"}
+                                                                                </Label>
+                                                                                <Input
+                                                                                    id={`matching-${key}`}
+                                                                                    type="number"
+                                                                                    min="0"
+                                                                                    value={mq.quantity}
+                                                                                    onChange={(e) =>
+                                                                                        handleMatchingQuantityChange(
+                                                                                            mId,
+                                                                                            parseInt(e.target.value) || 0
+                                                                                        )
+                                                                                    }
+                                                                                    placeholder="0"
+                                                                                />
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
 
-                                        <div>
-                                            <Label>Total Saree</Label>
-                                            <Input
-                                                value={calculateSareeTotalSaree()}
-                                                readOnly
-                                                className="bg-surface-300"
-                                            />
-                                        </div>
+                                                            <div>
+                                                                <Label htmlFor="cut">Cut*</Label>
+                                                                <Input
+                                                                    id="cut"
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={cut}
+                                                                    onChange={(e) => setCut(parseFloat(e.target.value) || 0)}
+                                                                    placeholder="0.00"
+                                                                    required
+                                                                />
+                                                            </div>
 
-                                        <div>
-                                            <Label>Total Meters</Label>
-                                            <Input
-                                                value={calculateSareeTotalMeters().toFixed(2)}
-                                                readOnly
-                                                className="bg-surface-300"
-                                            />
-                                        </div>
+                                                            <div>
+                                                                <Label>Total Saree</Label>
+                                                                <Input
+                                                                    value={calculateSareeTotalSaree()}
+                                                                    readOnly
+                                                                    className="bg-surface-300"
+                                                                />
+                                                            </div>
+
+                                                            <div>
+                                                                <Label>Total Meters</Label>
+                                                                <Input
+                                                                    value={calculateSareeTotalMeters().toFixed(2)}
+                                                                    readOnly
+                                                                    className="bg-surface-300"
+                                                                />
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                     </>
                                 )}
                             </>

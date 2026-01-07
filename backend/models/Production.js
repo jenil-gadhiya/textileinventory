@@ -7,7 +7,7 @@ const takaDetailSchema = new mongoose.Schema({
 }, { _id: false });
 
 const matchingQuantitySchema = new mongoose.Schema({
-  matchingId: { type: mongoose.Schema.Types.ObjectId, ref: "Matching", required: true },
+  matchingId: { type: mongoose.Schema.Types.ObjectId, ref: "Matching" },
   matchingName: { type: String, required: true },
   quantity: { type: Number, default: 0 }
 }, { _id: false });

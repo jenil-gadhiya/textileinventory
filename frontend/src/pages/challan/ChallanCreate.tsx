@@ -861,68 +861,58 @@ export function ChallanCreatePage() {
                                                         </>
                                                     ) : (
                                                         // Saree Item
+                                                        // Saree Item
                                                         <div className="space-y-2">
-                                                            {item.matchingQuantities?.map((mq, mqIdx) => {
-                                                                const matchingName =
-                                                                    orderItem.matchingQuantities?.[mqIdx];
-                                                                const name =
-                                                                    matchingName &&
-                                                                        typeof matchingName.matchingId === "object"
+                                                            {(() => {
+                                                                const isGrey = orderItem.qualityId && typeof orderItem.qualityId === "object" && orderItem.qualityId.fabricType?.toLowerCase() === "grey";
+
+                                                                return item.matchingQuantities?.map((mq, mqIdx) => {
+                                                                    const matchingName = orderItem.matchingQuantities?.[mqIdx];
+                                                                    const name = matchingName && typeof matchingName.matchingId === "object"
                                                                         ? (matchingName.matchingId as any).matchingName
                                                                         : "";
 
-                                                                return (
-                                                                    <div
-                                                                        key={mqIdx}
-                                                                        className="grid grid-cols-2 md:grid-cols-5 gap-4 items-center"
-                                                                    >
-                                                                        <div className="text-body">{name}</div>
-                                                                        <div>
-                                                                            <label className="block text-xs text-muted">
-                                                                                Ordered
-                                                                            </label>
-                                                                            <div className="text-body">
-                                                                                {mq.orderedQuantity} pcs
+                                                                    return (
+                                                                        <div
+                                                                            key={mqIdx}
+                                                                            className={`grid gap-4 items-center ${isGrey ? "grid-cols-2 md:grid-cols-4" : "grid-cols-2 md:grid-cols-5"
+                                                                                }`}
+                                                                        >
+                                                                            {!isGrey && <div className="text-body">{name}</div>}
+
+                                                                            <div>
+                                                                                <label className="block text-xs text-muted">Ordered</label>
+                                                                                <div className="text-body">{mq.orderedQuantity} pcs</div>
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="block text-xs text-muted">Remaining</label>
+                                                                                <div className="text-yellow-500">{mq.remainingQuantity} pcs</div>
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="block text-xs text-muted">Available Stock</label>
+                                                                                <div className="text-green-500 font-semibold">{mq.availableStock} pcs</div>
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="block text-xs text-muted mb-1">Challan Qty</label>
+                                                                                <input
+                                                                                    type="number"
+                                                                                    value={mq.challanQuantity}
+                                                                                    onChange={(e) =>
+                                                                                        updateChallanQuantity(
+                                                                                            itemIndex,
+                                                                                            parseInt(e.target.value) || 0,
+                                                                                            mqIdx
+                                                                                        )
+                                                                                    }
+                                                                                    max={mq.availableStock}
+                                                                                    min={0}
+                                                                                    className="w-full bg-surface-200 border border-border/10 rounded px-2 py-1 text-body text-sm"
+                                                                                />
                                                                             </div>
                                                                         </div>
-                                                                        <div>
-                                                                            <label className="block text-xs text-muted">
-                                                                                Remaining
-                                                                            </label>
-                                                                            <div className="text-yellow-500">
-                                                                                {mq.remainingQuantity} pcs
-                                                                            </div>
-                                                                        </div>
-                                                                        <div>
-                                                                            <label className="block text-xs text-muted">
-                                                                                Available Stock
-                                                                            </label>
-                                                                            <div className="text-green-500 font-semibold">
-                                                                                {mq.availableStock} pcs
-                                                                            </div>
-                                                                        </div>
-                                                                        <div>
-                                                                            <label className="block text-xs text-muted mb-1">
-                                                                                Challan Qty
-                                                                            </label>
-                                                                            <input
-                                                                                type="number"
-                                                                                value={mq.challanQuantity}
-                                                                                onChange={(e) =>
-                                                                                    updateChallanQuantity(
-                                                                                        itemIndex,
-                                                                                        parseInt(e.target.value) || 0,
-                                                                                        mqIdx
-                                                                                    )
-                                                                                }
-                                                                                max={mq.availableStock}
-                                                                                min={0}
-                                                                                className="w-full bg-surface-200 border border-border/10 rounded px-2 py-1 text-body text-sm"
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-                                                                );
-                                                            })}
+                                                                    );
+                                                                });
+                                                            })()}
                                                         </div>
                                                     )}
                                                 </div>

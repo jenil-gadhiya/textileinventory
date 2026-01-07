@@ -136,14 +136,16 @@ export const generateChallanPDF = async (req, res, next) => {
         doc.font("Helvetica-Bold").fontSize(11).fillColor("#000000").text("Item Summary", 40, summaryStartY);
 
         const summaryCols = [
-            { header: "Quality", x: 50, width: 150 },
-            { header: "Design", x: 200, width: 150 },
+            { header: "Quality", x: 50, width: 130 },
+            { header: "Design", x: 190, width: 100 },
+            { header: "Batch/Potla", x: 300, width: 80 },
             { header: "Total Quantity", x: 400, width: 100, align: 'right' }
         ];
 
         const summaryData = challan.items.map(item => {
             const qualityName = item.qualityId?.fabricName || "N/A";
             const designName = item.designId?.designNumber || "-";
+            const batchNo = item.batchNo || "-";
             let totalQty = 0;
             let unit = "Pcs";
             if (item.quantityType === "Meter") unit = "Mtrs";
@@ -154,14 +156,15 @@ export const generateChallanPDF = async (req, res, next) => {
                 totalQty = item.matchingQuantities?.reduce((sum, mq) => sum + (mq.challanQuantity || 0), 0) || 0;
                 unit = "Pcs";
             }
-            return { qualityName, designName, totalQty: `${totalQty} ${unit}` };
+            return { qualityName, designName, batchNo, totalQty: `${totalQty} ${unit}` };
         });
 
         const summaryEndY = drawTable(doc, summaryStartY + 15, summaryCols, summaryData, (doc, item, y, columns) => {
             doc.fontSize(9);
             doc.text(item.qualityName, columns[0].x, y + 5);
             doc.text(item.designName, columns[1].x, y + 5);
-            doc.text(item.totalQty, columns[2].x, y + 5, { width: columns[2].width, align: 'right' });
+            doc.text(item.batchNo, columns[2].x, y + 5);
+            doc.text(item.totalQty, columns[3].x, y + 5, { width: columns[3].width, align: 'right' });
         });
 
         // ================= SAREE DETAILS =================

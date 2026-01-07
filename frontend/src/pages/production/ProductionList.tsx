@@ -135,7 +135,7 @@ export function ProductionListPage() {
             id: p.id,
             production: p, // Keep full object for row click
             srNo: index + 1,
-            date: new Date(p.date).toLocaleDateString(),
+            date: new Date(p.date).toLocaleDateString('en-GB'),
             factory,
             stockType: p.stockType,
             item: p.stockType === "Taka" ? quality : `${quality} - ${design}`,
@@ -164,7 +164,7 @@ export function ProductionListPage() {
                 <div className="grid grid-cols-2 gap-4 bg-surface-200 p-4 rounded-lg">
                     <div>
                         <p className="text-sm text-muted">Date</p>
-                        <p className="font-semibold">{new Date(selectedProduction.date).toLocaleDateString()}</p>
+                        <p className="font-semibold">{new Date(selectedProduction.date).toLocaleDateString('en-GB')}</p>
                     </div>
                     <div>
                         <p className="text-sm text-muted">Factory</p>

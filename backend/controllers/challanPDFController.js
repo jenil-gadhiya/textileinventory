@@ -106,7 +106,8 @@ export const generateChallanPDF = async (req, res, next) => {
 
         doc.text(`Challan No: ${challan.challanNo}`, 50, infoY);
 
-        const dateText = `Date: ${new Date(challan.challanDate).toLocaleDateString()}`;
+        const cDate = new Date(challan.challanDate);
+        const dateText = `Date: ${cDate.getDate().toString().padStart(2, '0')}/${(cDate.getMonth() + 1).toString().padStart(2, '0')}/${cDate.getFullYear()}`;
         const dateWidth = doc.widthOfString(dateText);
         doc.text(dateText, (doc.page.width - dateWidth) / 2, infoY);
 

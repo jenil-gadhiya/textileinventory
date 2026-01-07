@@ -268,8 +268,8 @@ const ProductionChart = ({ data }: { data: { date: string; meters: number }[] })
         <polyline points={points} fill="none" stroke="#22d3ee" strokeWidth="2" vectorEffect="non-scaling-stroke" />
       </svg>
       <div className="absolute -bottom-6 w-full flex justify-between text-[10px] text-slate-500 px-0">
-        <span>{new Date(data[0].date).toLocaleDateString()}</span>
-        <span>{new Date(data[data.length - 1].date).toLocaleDateString()}</span>
+        <span>{new Date(data[0].date).toLocaleDateString('en-GB')}</span>
+        <span>{new Date(data[data.length - 1].date).toLocaleDateString('en-GB')}</span>
       </div>
     </div>
   );

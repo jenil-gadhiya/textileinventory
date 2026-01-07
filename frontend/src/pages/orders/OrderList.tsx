@@ -75,7 +75,7 @@ export function OrderListPage() {
         message += "--------------------------------\n\n";
 
         message += `${pad("Order No")} : ${order.orderNo}\n`;
-        message += `${pad("Date")} : ${new Date(order.date).toLocaleDateString()}\n`;
+        message += `${pad("Date")} : ${new Date(order.date).toLocaleDateString('en-GB')}\n`;
         if (party) message += `${pad("Party")} : ${party.toUpperCase()}\n`;
 
         message += "\n◆ LINE ITEMS\n\n";
@@ -246,7 +246,7 @@ export function OrderListPage() {
         return {
             id: order.id,
             orderNo: order.orderNo,
-            date: order.date,
+            date: new Date(order.date).toLocaleDateString('en-GB'),
             party,
             factory,
             broker,
@@ -341,7 +341,7 @@ export function OrderListPage() {
                     </div>
                     <div>
                         <p className="text-sm text-muted">Date</p>
-                        <p className="font-semibold">{selectedOrder.date}</p>
+                        <p className="font-semibold">{new Date(selectedOrder.date).toLocaleDateString('en-GB')}</p>
                     </div>
                     <div>
                         <p className="text-sm text-muted">Party</p>

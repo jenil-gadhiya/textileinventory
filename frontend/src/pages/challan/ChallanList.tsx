@@ -62,7 +62,7 @@ export function ChallanListPage() {
     const tableData = challans.map((challan) => ({
         id: getOrderId(challan),
         challanNo: challan.challanNo,
-        date: new Date(challan.challanDate).toLocaleDateString(),
+        date: new Date(challan.challanDate).toLocaleDateString('en-GB'),
         order: challan.orderId && typeof challan.orderId === "object" ? (challan.orderId as any).orderNo : "-",
         party: challan.partyId && typeof challan.partyId === "object" ? (challan.partyId as any).partyName : "-",
         items: challan.items.length,
@@ -88,7 +88,7 @@ export function ChallanListPage() {
                     <div>
                         <p className="text-sm text-muted">Date</p>
                         <p className="text-body font-medium">
-                            {new Date(selectedChallan.challanDate).toLocaleDateString()}
+                            {new Date(selectedChallan.challanDate).toLocaleDateString('en-GB')}
                         </p>
                     </div>
                     <div>

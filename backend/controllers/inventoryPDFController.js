@@ -85,8 +85,8 @@ export const generateInventoryPDF = async (req, res, next) => {
 
         // Header
         const dateText = (fromDate && toDate)
-            ? `Period: ${new Date(fromDate).toLocaleDateString()} to ${new Date(toDate).toLocaleDateString()}`
-            : `Date: ${new Date().toLocaleDateString()}`;
+            ? `Period: ${formatDate(fromDate)} to ${formatDate(toDate)}`
+            : `Date: ${formatDate(new Date())}`;
 
         // Title Left, Date Right
         doc.font("Helvetica-Bold").fontSize(18).text("Stock Report", 30, 40);
@@ -387,4 +387,10 @@ function sortInventoryItemsHelper(a, b) {
     if (prefixA > prefixB) return 1;
 
     return numA - numB;
+}
+
+function formatDate(d) {
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return "";
+    return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
 }

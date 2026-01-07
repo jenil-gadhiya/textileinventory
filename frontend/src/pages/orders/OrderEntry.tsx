@@ -140,8 +140,8 @@ export function OrderEntryPage() {
             // Depopulate line items for saving: ensure qualityId, designId, matchingId are just IDs strings
             const formattedLineItems = lineItems.map(item => ({
                 ...item,
-                qualityId: typeof item.qualityId === 'object' ? (item.qualityId as any)._id : item.qualityId,
-                designId: typeof item.designId === 'object' ? (item.designId as any)._id : item.designId,
+                qualityId: item.qualityId && typeof item.qualityId === 'object' ? (item.qualityId as any)._id : item.qualityId,
+                designId: item.designId && typeof item.designId === 'object' ? (item.designId as any)._id : item.designId,
                 // Matching IDs are tricky because they are inside matchingQuantities in some contexts, 
                 // but for OrderLineItem, do we have a top level matchingId? 
                 // Let's check the type definition.
@@ -149,9 +149,9 @@ export function OrderEntryPage() {
                 // Let's assume standard structure. If there's nested objects, we flatten them to IDs.
                 matchingQuantities: item.matchingQuantities?.map(mq => ({
                     ...mq,
-                    matchingId: typeof mq.matchingId === 'object' ? (mq.matchingId as any)._id : mq.matchingId
+                    matchingId: mq.matchingId && typeof mq.matchingId === 'object' ? (mq.matchingId as any)._id : mq.matchingId
                 })),
-                factoryId: typeof item.factoryId === 'object' ? (item.factoryId as any)._id : item.factoryId
+                factoryId: item.factoryId && typeof item.factoryId === 'object' ? (item.factoryId as any)._id : item.factoryId
             }));
 
             const payload: any = {

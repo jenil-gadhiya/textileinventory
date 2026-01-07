@@ -116,9 +116,10 @@ export const generateInventoryPDF = async (req, res, next) => {
         }
 
         // Table Constants - Updated columns (Removed Quality, Removed Type)
+        // Table Constants - Updated columns for Landscape usage
         const startX = 30;
-        // Cols: Design (150), Matching (150), Produced (120), Ordered (120), Available (120)
-        const colWidths = [150, 150, 120, 120, 120];
+        // Cols: Design (180), Matching (180), Produced (140), Ordered (140), Available (140) => Total 780
+        const colWidths = [180, 180, 140, 140, 140];
         const headers = ["Design", "Matching", "Produced", "Ordered", "Available"];
         const tableWidth = colWidths.reduce((a, b) => a + b, 0);
 
@@ -150,6 +151,8 @@ export const generateInventoryPDF = async (req, res, next) => {
 
             // Iterate Qualities
             Object.entries(qualities).forEach(([qualityName, items]) => {
+                // Sort Items using alphanumeric natural sort
+                items.sort(sortInventoryItemsHelper);
 
                 // Check page break for Quality Header + Table Header + 1 Row (approx 80px)
                 if (y + 80 > doc.page.height - 30) {
@@ -352,4 +355,28 @@ function drawTableHeader(doc, headers, startX, y, colWidths) {
         x += colWidths[i];
     });
     doc.moveTo(startX, y + 15).lineTo(startX + colWidths.reduce((a, b) => a + b, 0), y + 15).stroke();
+}
+
+// Helper for sorting items naturally by design number
+function sortInventoryItemsHelper(a, b) {
+    const dnA = String(a.designId?.designNumber || "").trim();
+    const dnB = String(b.designId?.designNumber || "").trim();
+
+    const regex = /^([^\d]*)(\d*)/;
+    const matchA = dnA.match(regex);
+    const matchB = dnB.match(regex);
+
+    const prefixA = matchA ? matchA[1].trim().toLowerCase() : "";
+    const numA = matchA && matchA[2] ? parseInt(matchA[2], 10) : -1;
+
+    const prefixB = matchB ? matchB[1].trim().toLowerCase() : "";
+    const numB = matchB && matchB[2] ? parseInt(matchB[2], 10) : -1;
+
+    if (prefixA && !prefixB) return -1;
+    if (!prefixA && prefixB) return 1;
+
+    if (prefixA < prefixB) return -1;
+    if (prefixA > prefixB) return 1;
+
+    return numA - numB;
 }

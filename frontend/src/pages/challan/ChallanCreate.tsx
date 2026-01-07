@@ -520,6 +520,17 @@ export function ChallanCreatePage() {
                         }))
                     };
                 }
+                if (item.type === "Saree") {
+                    return {
+                        ...item,
+                        matchingQuantities: item.matchingQuantities?.map(mq => ({
+                            ...mq,
+                            matchingId: mq.matchingId && typeof mq.matchingId === 'object'
+                                ? (mq.matchingId as any)._id || (mq.matchingId as any).id
+                                : mq.matchingId
+                        }))
+                    };
+                }
                 return item;
             });
 

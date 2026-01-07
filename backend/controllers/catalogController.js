@@ -94,12 +94,38 @@ export const createCatalog = asyncHandler(async (req, res) => {
   return res.status(201).json(populated);
 });
 
+// Helper for sorting
+const sortCatalogsHelper = (docA, docB) => {
+  const dnA = String(docA.designId?.designNumber || "").trim();
+  const dnB = String(docB.designId?.designNumber || "").trim();
+
+  const regex = /^([^\d]*)(\d*)/; // Match non-digits (prefix) then digits
+  const matchA = dnA.match(regex);
+  const matchB = dnB.match(regex);
+
+  const prefixA = matchA ? matchA[1].trim().toLowerCase() : "";
+  const numA = matchA && matchA[2] ? parseInt(matchA[2], 10) : -1; // -1 if no number to put 'RI' before 'RI 1'
+
+  const prefixB = matchB ? matchB[1].trim().toLowerCase() : "";
+  const numB = matchB && matchB[2] ? parseInt(matchB[2], 10) : -1;
+
+  // Alphabets first logic: if A has alphabet prefix and B is purely numeric (empty prefix), A wins
+  if (prefixA && !prefixB) return -1;
+  if (!prefixA && prefixB) return 1;
+
+  if (prefixA < prefixB) return -1;
+  if (prefixA > prefixB) return 1;
+
+  return numA - numB;
+};
+
 export const listCatalog = asyncHandler(async (req, res) => {
   const docs = await Catalog.find()
     .populate("qualityId", "fabricName loomType fabricType")
     .populate("designId", "designNumber designName")
-    .populate("matchingId", "matchingName")
-    .sort({ createdAt: -1 });
+    .populate("matchingId", "matchingName");
+
+  docs.sort(sortCatalogsHelper);
   res.json(docs);
 });
 
@@ -135,7 +161,8 @@ export const getCatalogByQuality = asyncHandler(async (req, res) => {
   const docs = await Catalog.find({ qualityId })
     .populate("qualityId", "fabricName loomType fabricType")
     .populate("designId", "designNumber designName")
-    .populate("matchingId", "matchingName")
-    .sort({ createdAt: -1 });
+    .populate("matchingId", "matchingName");
+
+  docs.sort(sortCatalogsHelper);
   res.json(docs);
 });

@@ -59,13 +59,22 @@ export const generateInventoryPDF = async (req, res, next) => {
             return json;
         });
 
+        // Filter out zero-value items (Produced, Ordered, Available all zero)
+        const activeItems = processedItems.filter(item => {
+            const hasProd = (item.totalMetersProduced > 0.01) || (item.totalSareeProduced > 0);
+            const hasOrd = (item.totalMetersOrdered > 0.01) || (item.totalSareeOrdered > 0);
+            // Available can be negative, so check absolute or non-zero
+            const hasAvail = (Math.abs(item.availableMeters) > 0.01) || (Math.abs(item.availableSaree) > 0);
+            return hasProd || hasOrd || hasAvail;
+        });
+
         // Calculate Totals
         let takaStats = { producedM: 0, producedC: 0, orderedM: 0, orderedC: 0, availableM: 0, availableC: 0 };
         let sareeStats = { produced: 0, ordered: 0, available: 0 };
         let hasTaka = false;
         let hasSaree = false;
 
-        processedItems.forEach(item => {
+        activeItems.forEach(item => {
             if (item.type === "Taka") {
                 hasTaka = true;
                 takaStats.producedM += (item.totalMetersProduced || 0);
@@ -83,7 +92,7 @@ export const generateInventoryPDF = async (req, res, next) => {
         });
 
         // Group by Factory
-        const groupedItems = processedItems.reduce((acc, item) => {
+        const groupedItems = activeItems.reduce((acc, item) => {
             const factoryName = item.factoryId?.factoryName || "Unknown Factory";
             if (!acc[factoryName]) acc[factoryName] = [];
             acc[factoryName].push(item);
@@ -91,7 +100,7 @@ export const generateInventoryPDF = async (req, res, next) => {
         }, {});
 
         // Generate PDF
-        const doc = new PDFDocument({ margin: 30, size: 'A4' }); // Portrait Mode
+        const doc = new PDFDocument({ margin: 20, size: 'A4' }); // Portrait Mode, Minimal Margin
 
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", `inline; filename=stock-report-${Date.now()}.pdf`);
@@ -107,7 +116,7 @@ export const generateInventoryPDF = async (req, res, next) => {
         doc.font("Helvetica-Bold").fontSize(18).text("Stock Report", 30, 40);
         doc.font("Helvetica").fontSize(10).text(dateText, 30, 48, { align: "right" });
 
-        let y = 80;
+        let y = 60;
 
         // Table Constants - Portrait Compact Columns (Total ~530)
         const startX = 30;
@@ -118,7 +127,7 @@ export const generateInventoryPDF = async (req, res, next) => {
 
         // Group items by Factory -> Quality
         // We really want to iterate: Factory A -> Quality 1 -> Items, Quality 2 -> Items...
-        const groupedByFactory = processedItems.reduce((acc, item) => {
+        const groupedByFactory = activeItems.reduce((acc, item) => {
             const fName = item.factoryId?.factoryName || "Unknown Factory";
             if (!acc[fName]) acc[fName] = {};
 
@@ -136,9 +145,9 @@ export const generateInventoryPDF = async (req, res, next) => {
             const factoryQualities = groupedByFactory[factoryName];
 
             // Factory Header
-            if (y + 40 > doc.page.height - 30) {
-                doc.addPage({ margin: 30 });
-                y = 50;
+            if (y + 40 > doc.page.height - 20) {
+                doc.addPage({ margin: 20 });
+                y = 40;
             }
 
             doc.font("Helvetica-Bold").fontSize(14).fillColor("#1e293b");
@@ -154,9 +163,9 @@ export const generateInventoryPDF = async (req, res, next) => {
                 items.sort(sortInventoryItemsHelper);
 
                 // Check page break for Quality Header + Table Header + 1 Row (approx 80px)
-                if (y + 80 > doc.page.height - 30) {
-                    doc.addPage({ margin: 30 });
-                    y = 50;
+                if (y + 80 > doc.page.height - 20) {
+                    doc.addPage({ margin: 20 });
+                    y = 40;
                     // Repeat Factory Header maybe?
                     doc.font("Helvetica-Bold").fontSize(10).fillColor("#94a3b8");
                     doc.text(`(Cont.) Factory: ${factoryName}`, startX, y);
@@ -189,9 +198,9 @@ export const generateInventoryPDF = async (req, res, next) => {
 
                 items.forEach((item, index) => {
                     // Check for page break
-                    if (y > 750) { // Portrait height approx limit
-                        doc.addPage({ margin: 30 });
-                        y = 50;
+                    if (y > doc.page.height - 40) { // Portrait height limit
+                        doc.addPage({ margin: 20 });
+                        y = 40;
                         drawTableHeader(doc, headers, startX, y, colWidths);
                         y += 20;
                         doc.font("Helvetica").fontSize(10);
@@ -297,12 +306,12 @@ export const generateInventoryPDF = async (req, res, next) => {
         });
 
         // Grand Total Logic (Only if multiple qualities exist)
-        const uniqueQualitiesCount = new Set(processedItems.map(i => i.qualityId?.fabricName)).size;
+        const uniqueQualitiesCount = new Set(activeItems.map(i => i.qualityId?.fabricName)).size;
 
         if (uniqueQualitiesCount > 1) {
-            if (y + 100 > doc.page.height - 30) {
+            if (y + 100 > doc.page.height - 20) {
                 doc.addPage();
-                y = 50;
+                y = 40;
             }
 
             y += 20;
@@ -318,9 +327,9 @@ export const generateInventoryPDF = async (req, res, next) => {
             }
             if (hasSaree) {
                 // Check page break again
-                if (y + boxHeight > doc.page.height - 30) {
+                if (y + boxHeight > doc.page.height - 20) {
                     doc.addPage();
-                    y = 50;
+                    y = 40;
                 }
                 drawTotalsBox(doc, 30, y, boxWidth, boxHeight, "Saree Grand Total", sareeStats, "Saree");
             }

@@ -550,11 +550,13 @@ export function ProductionEntryPage() {
                                         required
                                     >
                                         <option value="">Select Quality</option>
-                                        {qualities.map((q) => (
-                                            <option key={q.id} value={q.id}>
-                                                {q.fabricName} - {q.loomType} - {q.fabricType}
-                                            </option>
-                                        ))}
+                                        {qualities
+                                            .filter(q => q.loomType && q.loomType.toLowerCase() === "power loom")
+                                            .map((q) => (
+                                                <option key={q.id} value={q.id}>
+                                                    {q.fabricName} - {q.loomType} - {q.fabricType}
+                                                </option>
+                                            ))}
                                     </select>
                                 </div>
 

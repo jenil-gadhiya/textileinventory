@@ -112,18 +112,19 @@ export const generateInventoryPDF = async (req, res, next) => {
             ? `Period: ${formatDate(fromDate)} to ${formatDate(toDate)}`
             : `Date: ${formatDate(new Date())}`;
 
-        // Title Left, Date Right
-        doc.font("Helvetica-Bold").fontSize(18).text("Stock Report", 10, 20);
-        doc.font("Helvetica").fontSize(10).text(dateText, 10, 28, { align: "right" });
-
-        let y = 50;
-
-        // Table Constants - Portrait Compact Columns (Total ~530)
-        const startX = 10;
-        // Cols: Design (120), Matching (110), Produced (100), Ordered (100), Available (100)
-        const colWidths = [120, 110, 100, 100, 100];
+        // Table Constants - Portrait Centered
+        // A4 Width = 595.28 pts. Target Table Width = 560.
+        const startX = 18;
+        // Cols: Design (130), Matching (130), Produced (100), Ordered (100), Available (100)
+        const colWidths = [130, 130, 100, 100, 100];
         const headers = ["Design", "Matching", "Produced", "Ordered", "Available"];
         const tableWidth = colWidths.reduce((a, b) => a + b, 0);
+
+        // Title Left, Date Right (Aligned to Table)
+        doc.font("Helvetica-Bold").fontSize(18).text("Stock Report", startX, 20);
+        doc.font("Helvetica").fontSize(10).text(dateText, startX, 28, { align: "right", width: tableWidth });
+
+        let y = 50;
 
         // Group items by Factory -> Quality
         // We really want to iterate: Factory A -> Quality 1 -> Items, Quality 2 -> Items...
@@ -315,14 +316,14 @@ export const generateInventoryPDF = async (req, res, next) => {
             }
 
             y += 20;
-            doc.font("Helvetica-Bold").fontSize(14).text("Grand Total", 10, y);
+            doc.font("Helvetica-Bold").fontSize(14).text("Grand Total", startX, y);
             y += 25;
 
-            const boxWidth = 350;
+            const boxWidth = tableWidth; // Match table width
             const boxHeight = 60;
 
             if (hasTaka) {
-                drawTotalsBox(doc, 10, y, boxWidth, boxHeight, "Taka Grand Total", takaStats, "Taka");
+                drawTotalsBox(doc, startX, y, boxWidth, boxHeight, "Taka Grand Total", takaStats, "Taka");
                 y += boxHeight + 20;
             }
             if (hasSaree) {
@@ -331,7 +332,7 @@ export const generateInventoryPDF = async (req, res, next) => {
                     doc.addPage();
                     y = 20;
                 }
-                drawTotalsBox(doc, 10, y, boxWidth, boxHeight, "Saree Grand Total", sareeStats, "Saree");
+                drawTotalsBox(doc, startX, y, boxWidth, boxHeight, "Saree Grand Total", sareeStats, "Saree");
             }
         }
 

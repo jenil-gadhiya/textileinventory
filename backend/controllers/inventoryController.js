@@ -56,6 +56,21 @@ export const getInventory = async (req, res, next) => {
             return json;
         });
 
+        // Sort alphabetically: Factory -> Quality -> Design (Natural)
+        itemsWithVirtuals.sort((a, b) => {
+            const fA = a.factoryId?.factoryName || "";
+            const fB = b.factoryId?.factoryName || "";
+            if (fA.toLowerCase() !== fB.toLowerCase()) return fA.localeCompare(fB);
+
+            const qA = a.qualityId?.fabricName || "";
+            const qB = b.qualityId?.fabricName || "";
+            if (qA.toLowerCase() !== qB.toLowerCase()) return qA.localeCompare(qB);
+
+            const dA = a.designId?.designNumber || "";
+            const dB = b.designId?.designNumber || "";
+            return dA.localeCompare(dB, undefined, { numeric: true, sensitivity: 'base' });
+        });
+
         res.json(itemsWithVirtuals);
     } catch (error) {
         next(error);

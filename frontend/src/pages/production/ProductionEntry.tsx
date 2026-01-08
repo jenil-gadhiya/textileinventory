@@ -755,7 +755,7 @@ export function ProductionEntryPage() {
                                                         <>
                                                             {matchingQuantities.length > 0 && (
                                                                 <div className="space-y-4">
-                                                                    <h3 className="font-semibold text-lg">Matching Quantities</h3>
+                                                                    <h3 className="font-semibold text-lg text-body">Matching Quantities</h3>
                                                                     {matchingQuantities.map((mq, idx) => {
                                                                         if (!mq) return null;
                                                                         const mId = typeof mq.matchingId === 'object'

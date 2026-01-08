@@ -7,7 +7,15 @@ export const generateInventoryPDF = async (req, res, next) => {
 
         const filter = {};
         if (factory) filter.factoryId = factory;
-        if (quality) filter.qualityId = quality;
+        if (quality) {
+            if (Array.isArray(quality)) {
+                filter.qualityId = { $in: quality };
+            } else if (quality.includes(',')) {
+                filter.qualityId = { $in: quality.split(',') };
+            } else {
+                filter.qualityId = quality;
+            }
+        }
         if (design) filter.designId = design;
         if (type) filter.type = type;
 

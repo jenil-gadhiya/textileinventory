@@ -26,7 +26,8 @@ export function StockReportPage() {
 
     // Filter states
     const [factoryFilter, setFactoryFilter] = useState("");
-    const [qualityFilter, setQualityFilter] = useState("");
+    const [qualityFilter, setQualityFilter] = useState<string[]>([]);
+    const [isQualityDropdownOpen, setIsQualityDropdownOpen] = useState(false);
     const [designFilter, setDesignFilter] = useState("");
     const [typeFilter, setTypeFilter] = useState<"" | "Taka" | "Saree">("");
 
@@ -67,7 +68,7 @@ export function StockReportPage() {
             setLoading(true);
             const params: any = {};
             if (factoryFilter) params.factory = factoryFilter;
-            if (qualityFilter) params.quality = qualityFilter;
+            if (qualityFilter.length > 0) params.quality = qualityFilter.join(",");
             if (designFilter) params.design = designFilter;
             if (typeFilter) params.type = typeFilter;
             if (fromDate) params.fromDate = fromDate;
@@ -84,14 +85,14 @@ export function StockReportPage() {
 
     const clearFilters = () => {
         setFactoryFilter("");
-        setQualityFilter("");
+        setQualityFilter([]);
         setDesignFilter("");
         setTypeFilter("");
         setFromDate("");
         setToDate("");
     };
 
-    const hasActiveFilters = factoryFilter || qualityFilter || designFilter || typeFilter || fromDate || toDate;
+    const hasActiveFilters = factoryFilter || qualityFilter.length > 0 || designFilter || typeFilter || fromDate || toDate;
 
     const handleEdit = (id: string) => {
         const item = inventory.find(i => i.id === id);
@@ -104,7 +105,7 @@ export function StockReportPage() {
     const handleGeneratePDF = () => {
         const query = new URLSearchParams();
         if (factoryFilter) query.append("factory", factoryFilter);
-        if (qualityFilter) query.append("quality", qualityFilter);
+        if (qualityFilter.length > 0) query.append("quality", qualityFilter.join(","));
         if (designFilter) query.append("design", designFilter);
         if (typeFilter) query.append("type", typeFilter);
         if (fromDate) query.append("fromDate", fromDate);
@@ -250,21 +251,57 @@ export function StockReportPage() {
                                     </select>
                                 </div>
 
-                                {/* Quality Filter */}
-                                <div>
+                                {/* Quality Filter (Multi-Select) */}
+                                <div className="relative">
                                     <label className="block text-xs text-muted mb-2">Quality</label>
-                                    <select
-                                        value={qualityFilter}
-                                        onChange={(e) => setQualityFilter(e.target.value)}
-                                        className="w-full bg-surface-200 border border-border/10 rounded px-3 py-2 text-sm text-body focus:outline-none focus:ring-2 focus:ring-primary"
+                                    <button
+                                        onClick={() => setIsQualityDropdownOpen(!isQualityDropdownOpen)}
+                                        className="w-full bg-surface-200 border border-border/10 rounded px-3 py-2 text-sm text-body text-left flex justify-between items-center focus:outline-none focus:ring-2 focus:ring-primary h-[38px]"
                                     >
-                                        <option value="">All Qualities</option>
-                                        {qualities.map((quality) => (
-                                            <option key={quality.id} value={quality.id}>
-                                                {quality.fabricName}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        <span className="truncate">
+                                            {qualityFilter.length === 0
+                                                ? "All Qualities"
+                                                : `${qualityFilter.length} Selected`}
+                                        </span>
+                                        <span className="text-xs opacity-50">▼</span>
+                                    </button>
+
+                                    {isQualityDropdownOpen && (
+                                        <>
+                                            <div
+                                                className="fixed inset-0 z-40"
+                                                onClick={() => setIsQualityDropdownOpen(false)}
+                                            ></div>
+                                            <div className="absolute top-full left-0 right-0 mt-1 bg-surface-100 border border-border/10 rounded shadow-lg z-50 max-h-60 overflow-y-auto p-2 space-y-1">
+                                                {qualities.map((quality) => (
+                                                    <div
+                                                        key={quality.id}
+                                                        className="flex items-center gap-2 p-2 hover:bg-surface-200 rounded cursor-pointer"
+                                                        onClick={() => {
+                                                            setQualityFilter((prev) =>
+                                                                prev.includes(quality.id)
+                                                                    ? prev.filter((id) => id !== quality.id)
+                                                                    : [...prev, quality.id]
+                                                            );
+                                                        }}
+                                                    >
+                                                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${qualityFilter.includes(quality.id)
+                                                                ? "bg-primary border-primary"
+                                                                : "border-slate-400"
+                                                            }`}>
+                                                            {qualityFilter.includes(quality.id) && (
+                                                                <span className="text-white text-[10px]">✓</span>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-sm text-body">{quality.fabricName}</span>
+                                                    </div>
+                                                ))}
+                                                {qualities.length === 0 && (
+                                                    <div className="text-xs text-muted p-2">No qualities found</div>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
 
                                 {/* Design Filter */}

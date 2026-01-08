@@ -857,8 +857,7 @@ export function ProductionEntryPage() {
                                         submitProduction(true);
                                     }}
                                     disabled={loading}
-                                    variant="secondary"
-                                    className="bg-gradient-to-r from-neon-cyan to-neon-purple text-white border-0"
+                                    className="text-white"
                                 >
                                     Add & Next Design
                                 </Button>

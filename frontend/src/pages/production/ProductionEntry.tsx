@@ -328,7 +328,7 @@ export function ProductionEntryPage() {
                     if (currentTakaNo || currentMeter) {
                         alert("You have entered Taka Details but haven't clicked 'ADD'. Please add the taka to the list before saving.");
                     } else {
-                        alert("Please add at least one taka detail to the list.");
+                        alert("Please add at least one taka (pcs/meter) details.");
                     }
                     setLoading(false);
                     return;
@@ -365,7 +365,7 @@ export function ProductionEntryPage() {
 
                 if (activeMatchings.length === 0) {
                     console.log("Validation Failed: All quantities are 0");
-                    alert("Please enter a quantity for at least one matching.");
+                    alert("Please enter pieces for at least one matching.");
                     setLoading(false);
                     return;
                 }
@@ -433,7 +433,8 @@ export function ProductionEntryPage() {
                     }
 
                     if (hasNext) {
-                        alert(`Saved! Switching to next design: ${nextDesignNumber}`);
+                        // Alert removed: Direct switch
+
 
                         // Reset fields but set new design
                         if (stockType === "Taka") {

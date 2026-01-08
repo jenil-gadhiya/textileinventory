@@ -100,7 +100,7 @@ export const generateInventoryPDF = async (req, res, next) => {
         }, {});
 
         // Generate PDF
-        const doc = new PDFDocument({ margin: 20, size: 'A4' }); // Portrait Mode, Minimal Margin
+        const doc = new PDFDocument({ margin: 5, size: 'A4' }); // Portrait Mode, Ultra Minimal Margin
 
         res.setHeader("Content-Type", "application/pdf");
         res.setHeader("Content-Disposition", `inline; filename=stock-report-${Date.now()}.pdf`);
@@ -113,13 +113,13 @@ export const generateInventoryPDF = async (req, res, next) => {
             : `Date: ${formatDate(new Date())}`;
 
         // Title Left, Date Right
-        doc.font("Helvetica-Bold").fontSize(18).text("Stock Report", 30, 40);
-        doc.font("Helvetica").fontSize(10).text(dateText, 30, 48, { align: "right" });
+        doc.font("Helvetica-Bold").fontSize(18).text("Stock Report", 10, 20);
+        doc.font("Helvetica").fontSize(10).text(dateText, 10, 28, { align: "right" });
 
-        let y = 60;
+        let y = 50;
 
         // Table Constants - Portrait Compact Columns (Total ~530)
-        const startX = 30;
+        const startX = 10;
         // Cols: Design (120), Matching (110), Produced (100), Ordered (100), Available (100)
         const colWidths = [120, 110, 100, 100, 100];
         const headers = ["Design", "Matching", "Produced", "Ordered", "Available"];
@@ -146,8 +146,8 @@ export const generateInventoryPDF = async (req, res, next) => {
 
             // Factory Header
             if (y + 40 > doc.page.height - 20) {
-                doc.addPage({ margin: 20 });
-                y = 40;
+                doc.addPage({ margin: 5 });
+                y = 20;
             }
 
             doc.font("Helvetica-Bold").fontSize(14).fillColor("#1e293b");
@@ -164,8 +164,8 @@ export const generateInventoryPDF = async (req, res, next) => {
 
                 // Check page break for Quality Header + Table Header + 1 Row (approx 80px)
                 if (y + 80 > doc.page.height - 20) {
-                    doc.addPage({ margin: 20 });
-                    y = 40;
+                    doc.addPage({ margin: 5 });
+                    y = 20;
                     // Repeat Factory Header maybe?
                     doc.font("Helvetica-Bold").fontSize(10).fillColor("#94a3b8");
                     doc.text(`(Cont.) Factory: ${factoryName}`, startX, y);
@@ -198,9 +198,9 @@ export const generateInventoryPDF = async (req, res, next) => {
 
                 items.forEach((item, index) => {
                     // Check for page break
-                    if (y > doc.page.height - 40) { // Portrait height limit
-                        doc.addPage({ margin: 20 });
-                        y = 40;
+                    if (y > doc.page.height - 30) { // Portrait height limit
+                        doc.addPage({ margin: 5 });
+                        y = 20;
                         drawTableHeader(doc, headers, startX, y, colWidths);
                         y += 20;
                         doc.font("Helvetica").fontSize(10);
@@ -311,27 +311,27 @@ export const generateInventoryPDF = async (req, res, next) => {
         if (uniqueQualitiesCount > 1) {
             if (y + 100 > doc.page.height - 20) {
                 doc.addPage();
-                y = 40;
+                y = 20;
             }
 
             y += 20;
-            doc.font("Helvetica-Bold").fontSize(14).text("Grand Total", 30, y);
+            doc.font("Helvetica-Bold").fontSize(14).text("Grand Total", 10, y);
             y += 25;
 
             const boxWidth = 350;
             const boxHeight = 60;
 
             if (hasTaka) {
-                drawTotalsBox(doc, 30, y, boxWidth, boxHeight, "Taka Grand Total", takaStats, "Taka");
+                drawTotalsBox(doc, 10, y, boxWidth, boxHeight, "Taka Grand Total", takaStats, "Taka");
                 y += boxHeight + 20;
             }
             if (hasSaree) {
                 // Check page break again
                 if (y + boxHeight > doc.page.height - 20) {
                     doc.addPage();
-                    y = 40;
+                    y = 20;
                 }
-                drawTotalsBox(doc, 30, y, boxWidth, boxHeight, "Saree Grand Total", sareeStats, "Saree");
+                drawTotalsBox(doc, 10, y, boxWidth, boxHeight, "Saree Grand Total", sareeStats, "Saree");
             }
         }
 

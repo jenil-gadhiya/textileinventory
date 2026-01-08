@@ -109,10 +109,10 @@ export const generateInventoryPDF = async (req, res, next) => {
 
         let y = 80;
 
-        // Table Constants - Portrait Compact Columns (Total ~535)
+        // Table Constants - Portrait Compact Columns (Total ~530)
         const startX = 30;
-        // Cols: Design (125), Matching (125), Produced (95), Ordered (95), Available (95)
-        const colWidths = [125, 125, 95, 95, 95];
+        // Cols: Design (120), Matching (110), Produced (100), Ordered (100), Available (100)
+        const colWidths = [120, 110, 100, 100, 100];
         const headers = ["Design", "Matching", "Produced", "Ordered", "Available"];
         const tableWidth = colWidths.reduce((a, b) => a + b, 0);
 
@@ -129,12 +129,15 @@ export const generateInventoryPDF = async (req, res, next) => {
             return acc;
         }, {});
 
-        // Iterate
-        Object.entries(groupedByFactory).forEach(([factoryName, qualities]) => {
+        // Sort items by Factory -> Quality
+        const sortedFactories = Object.keys(groupedByFactory).sort();
+
+        sortedFactories.forEach(factoryName => {
+            const factoryQualities = groupedByFactory[factoryName];
 
             // Factory Header
             if (y + 40 > doc.page.height - 30) {
-                doc.addPage({ layout: 'landscape', margin: 30 });
+                doc.addPage({ margin: 30 });
                 y = 50;
             }
 
@@ -142,14 +145,17 @@ export const generateInventoryPDF = async (req, res, next) => {
             doc.text(`FACTORY: ${factoryName.toUpperCase()}`, startX, y);
             y += 25;
 
-            // Iterate Qualities
-            Object.entries(qualities).forEach(([qualityName, items]) => {
+            // Sort Qualities explicitly
+            const sortedQualityNames = Object.keys(factoryQualities).sort((a, b) => a.localeCompare(b));
+
+            sortedQualityNames.forEach(qualityName => {
+                const items = factoryQualities[qualityName];
                 // Sort Items using alphanumeric natural sort
                 items.sort(sortInventoryItemsHelper);
 
                 // Check page break for Quality Header + Table Header + 1 Row (approx 80px)
                 if (y + 80 > doc.page.height - 30) {
-                    doc.addPage({ layout: 'landscape', margin: 30 });
+                    doc.addPage({ margin: 30 });
                     y = 50;
                     // Repeat Factory Header maybe?
                     doc.font("Helvetica-Bold").fontSize(10).fillColor("#94a3b8");
@@ -183,8 +189,8 @@ export const generateInventoryPDF = async (req, res, next) => {
 
                 items.forEach((item, index) => {
                     // Check for page break
-                    if (y > 520) {
-                        doc.addPage({ layout: 'landscape', margin: 30 });
+                    if (y > 750) { // Portrait height approx limit
+                        doc.addPage({ margin: 30 });
                         y = 50;
                         drawTableHeader(doc, headers, startX, y, colWidths);
                         y += 20;

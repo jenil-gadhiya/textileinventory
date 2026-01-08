@@ -156,7 +156,7 @@ export function StockReportPage() {
                 ? `${item.totalMetersProduced.toFixed(2)}m (${item.totalTakaProduced || 0} Taka)`
                 : `${item.totalSareeProduced} pcs`,
             ordered: item.type === "Taka"
-                ? `${item.totalMetersOrdered.toFixed(2)}m (${item.totalTakaOrdered || 0} Taka)`
+                ? `${item.totalMetersOrdered.toFixed(2)}m (${(item.totalMetersOrdered > 0 ? item.totalTakaOrdered : 0) || 0} Taka)`
                 : `${item.totalSareeOrdered} pcs`,
             available: item.type === "Taka"
                 ? `${item.availableMeters.toFixed(2)}m (${Math.max(0, item.availableTaka || 0)} Taka)`
@@ -342,7 +342,10 @@ export function StockReportPage() {
                                                 <div className="text-xs text-slate-500">
                                                     {inventory
                                                         .filter(i => i.type === "Taka")
-                                                        .reduce((sum, i) => sum + (i.totalTakaProduced || 0), 0)} Taka
+                                                        .reduce((sum, i) => {
+                                                            const orderedPieces = (i.totalMetersOrdered > 0 ? i.totalTakaOrdered : 0) || 0;
+                                                            return sum + orderedPieces;
+                                                        }, 0)} Taka
                                                 </div>
                                             </div>
                                             <div>

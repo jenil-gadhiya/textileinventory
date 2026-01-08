@@ -32,6 +32,13 @@ export const generateInventoryPDF = async (req, res, next) => {
         // Correction Logic & Processing
         const processedItems = items.map((item) => {
             const json = item.toJSON();
+
+            // Fix: If Meters Ordered is 0, ensure Pieces Ordered is 0 (Fix consistency issues)
+            if (json.type === "Taka" && (json.totalMetersOrdered === 0 || !json.totalMetersOrdered)) {
+                json.totalTakaOrdered = 0;
+                json.availableTaka = json.totalTakaProduced || 0;
+            }
+
             // Sanity check: If Ordered Taka Count matches Ordered Meters (corruption) and is unrealistically high
             if (json.type === "Taka" && json.totalTakaOrdered > 20 && Math.abs(json.totalTakaOrdered - json.totalMetersOrdered) < 5) {
                 const avgLen = (json.totalMetersProduced && json.totalTakaProduced)

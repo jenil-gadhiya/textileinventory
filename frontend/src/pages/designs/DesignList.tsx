@@ -16,7 +16,7 @@ export function DesignListPage() {
     () =>
       designs.filter((d) =>
         [d.designNumber, d.designName, d.itemName].some((val) =>
-          val?.toString().toLowerCase().includes(search.toLowerCase().trim())
+          (val || "").toString().toLowerCase().includes(search.toLowerCase().trim())
         )
       ),
     [designs, search]

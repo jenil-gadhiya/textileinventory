@@ -3,7 +3,7 @@ import { Salesman } from "../models/Salesman.js";
 // GET /api/salesmen
 export const getSalesmen = async (req, res, next) => {
     try {
-        const salesmen = await Salesman.find();
+        const salesmen = await Salesman.find().sort({ salesmanName: 1 });
         res.json(salesmen);
     } catch (error) {
         next(error);

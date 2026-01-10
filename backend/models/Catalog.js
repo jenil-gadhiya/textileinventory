@@ -12,6 +12,8 @@ const catalogSchema = new mongoose.Schema(
   defaultOptions
 );
 
+catalogSchema.index({ qualityId: 1, designId: 1, matchingId: 1, stockType: 1 }, { unique: true });
+
 export const Catalog = mongoose.model("Catalog", catalogSchema);
 
 

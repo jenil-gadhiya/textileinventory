@@ -10,7 +10,7 @@ import {
 
 const router = Router();
 
-router.route("/").get(listController(Quality)).post(createController(Quality));
+router.route("/").get(listController(Quality, [], { fabricName: 1 })).post(createController(Quality));
 router
   .route("/:id")
   .get(getController(Quality))

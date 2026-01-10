@@ -2,7 +2,7 @@ import { Broker } from "../models/Broker.js";
 
 export const getBrokers = async (req, res, next) => {
     try {
-        const brokers = await Broker.find().sort({ createdAt: -1 });
+        const brokers = await Broker.find().sort({ brokerName: 1 });
         res.json(brokers);
     } catch (error) {
         next(error);

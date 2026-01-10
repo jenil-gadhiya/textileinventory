@@ -3,7 +3,7 @@ import { defaultOptions } from "./options.js";
 
 const brokerSchema = new mongoose.Schema(
     {
-        brokerName: { type: String, required: true },
+        brokerName: { type: String, required: true, unique: true },
         phoneNumber: { type: String }
     },
     defaultOptions

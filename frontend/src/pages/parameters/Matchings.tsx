@@ -88,6 +88,11 @@ export function MatchingsPage() {
     }
   };
 
+  const [search, setSearch] = useState("");
+  const filteredMatchings = matchings.filter((m) =>
+    m.matchingName.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -163,16 +168,25 @@ export function MatchingsPage() {
                 {editing
                   ? "Update Matching"
                   : isSubmitting
-                  ? "Adding..."
-                  : "Add All Matchings"}
+                    ? "Adding..."
+                    : "Add All Matchings"}
               </Button>
             </div>
           </div>
         </Card>
       </motion.div>
 
+      <div className="flex justify-end">
+        <Input
+          placeholder="Search matchings..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
+
       <DataTable
-        data={matchings}
+        data={filteredMatchings}
         columns={[
           { key: "matchingName", header: "Matching" },
           {

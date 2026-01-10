@@ -36,6 +36,13 @@ export function QualitiesPage() {
     setForm({ fabricName: "", loomType: "", fabricType: "" });
   };
 
+  const [search, setSearch] = useState("");
+  const filteredQualities = qualities.filter((q) =>
+    q.fabricName.toLowerCase().includes(search.toLowerCase()) ||
+    q.loomType.toLowerCase().includes(search.toLowerCase()) ||
+    q.fabricType.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader title="Quality Names" subtitle="Fabric, loom and type master." />
@@ -119,8 +126,17 @@ export function QualitiesPage() {
         </Card>
       </motion.div>
 
+      <div className="flex justify-end">
+        <Input
+          placeholder="Search qualities..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
+
       <DataTable
-        data={qualities}
+        data={filteredQualities}
         columns={[
           { key: "fabricName", header: "Fabric" },
           { key: "loomType", header: "Loom" },

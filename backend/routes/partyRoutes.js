@@ -10,7 +10,7 @@ import {
 
 const router = Router();
 
-router.route("/").get(listController(Party)).post(createController(Party));
+router.route("/").get(listController(Party, [], { partyName: 1 })).post(createController(Party));
 router
   .route("/:id")
   .get(getController(Party))

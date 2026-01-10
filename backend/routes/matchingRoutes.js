@@ -10,7 +10,7 @@ import {
 
 const router = Router();
 
-router.route("/").get(listController(Matching)).post(createController(Matching));
+router.route("/").get(listController(Matching, [], { matchingName: 1 })).post(createController(Matching));
 router
   .route("/:id")
   .get(getController(Matching))

@@ -10,7 +10,7 @@ import {
 
 const router = Router();
 
-router.route("/").get(listController(Design, [], { designNumber: 1 })).post(createController(Design));
+router.route("/").get(listController(Design, [], { designNumber: 1 }, { locale: "en_US", numericOrdering: true })).post(createController(Design));
 router
   .route("/:id")
   .get(getController(Design))

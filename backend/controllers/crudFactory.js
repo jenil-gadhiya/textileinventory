@@ -6,9 +6,13 @@ export const createController = (Model) =>
     res.status(201).json(doc);
   });
 
-export const listController = (Model, populate = [], sort = {}) =>
+export const listController = (Model, populate = [], sort = {}, collation = null) =>
   asyncHandler(async (req, res) => {
-    const docs = await Model.find().populate(populate).sort(sort);
+    let query = Model.find().populate(populate).sort(sort);
+    if (collation) {
+      query = query.collation(collation);
+    }
+    const docs = await query;
     res.json(docs);
   });
 

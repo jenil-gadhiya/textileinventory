@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/PageHeader";
 
 const schema = z.object({
   partyName: z.string().min(1, "Required"),
-  partyCode: z.string().optional(),
+  partyCode: z.preprocess((val) => (val === "" ? undefined : val), z.string().optional()),
   brokerName: z.string().optional(),
   phone: z.string().optional(),
   address: z.string().optional(),

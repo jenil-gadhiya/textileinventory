@@ -119,14 +119,15 @@ export function ChallanCreatePage() {
                     const currentChallanQty = challanItem ? challanItem.challanQuantity : 0;
                     itemData.remainingQuantity = (lineItem.quantity - dispatched) + currentChallanQty;
 
-                    // STOCK CALCULATION
+                    // STOCK CALCULATION - Use PRODUCED as it represents total pending stock
                     const inv = inventoryData.find(
                         (i: any) =>
                             getObjId(i.qualityId) === itemData.qualityId &&
                             i.type === "Taka"
                     );
-                    itemData.availableStock = (inv?.availableMeters || 0) + currentChallanQty;
-                    itemData.availableTaka = (inv?.availableTaka || 0) + (challanItem?.selectedPieces?.length || 0);
+                    // Use totalMetersProduced instead of availableMeters
+                    itemData.availableStock = (inv?.totalMetersProduced || 0) + currentChallanQty;
+                    itemData.availableTaka = (inv?.totalTakaProduced || 0) + (challanItem?.selectedPieces?.length || 0);
 
                     // Map Selected Pieces
                     if (challanItem && challanItem.selectedPieces) {
@@ -169,7 +170,8 @@ export function ChallanCreatePage() {
                             orderedQuantity: mq.quantity,
                             challanQuantity: currentQty,
                             remainingQuantity: (mq.quantity - dispatched) + currentQty,
-                            availableStock: (inv?.availableSaree || 0) + currentQty
+                            // Use totalSareeProduced instead of availableSaree
+                            availableStock: (inv?.totalSareeProduced || 0) + currentQty
                         };
                     });
 
@@ -266,8 +268,9 @@ export function ChallanCreatePage() {
                             inv.type === "Taka";
                     });
 
-                    const availableStock = matchingStockItems.reduce((sum, inv) => sum + (inv.availableMeters || 0), 0);
-                    const availableTaka = matchingStockItems.reduce((sum, inv) => sum + (inv.availableTaka || 0), 0);
+                    // Use totalProduced instead of available for challan stock display
+                    const availableStock = matchingStockItems.reduce((sum, inv) => sum + (inv.totalMetersProduced || 0), 0);
+                    const availableTaka = matchingStockItems.reduce((sum, inv) => sum + (inv.totalTakaProduced || 0), 0);
 
                     // Fetch available pieces for selection
                     const availablePieces = await fetchAvailableStockPieces(qualityId, designId);
@@ -328,7 +331,8 @@ export function ChallanCreatePage() {
                                     inv.type === "Saree";
                             });
 
-                            const availableStock = matchingStockItems.reduce((sum, inv) => sum + (inv.availableSaree || 0), 0);
+                            // Use totalSareeProduced instead of availableSaree
+                            const availableStock = matchingStockItems.reduce((sum, inv) => sum + (inv.totalSareeProduced || 0), 0);
 
                             return {
                                 matchingId,

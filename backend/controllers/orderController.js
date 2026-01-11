@@ -13,6 +13,7 @@ export const getOrders = async (req, res, next) => {
             .populate("salesmanId", "salesmanName")
             .populate("lineItems.qualityId", "fabricName")
             .populate("lineItems.designId", "designNumber designName")
+            .populate("lineItems.factoryId", "factoryName")
             .populate("lineItems.matchingQuantities.matchingId", "matchingName")
             .sort({ createdAt: -1 });
         res.json(orders);
@@ -30,6 +31,7 @@ export const getOrder = async (req, res, next) => {
             .populate("salesmanId")
             .populate("lineItems.qualityId")
             .populate("lineItems.designId")
+            .populate("lineItems.factoryId")
             .populate("lineItems.matchingQuantities.matchingId");
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
@@ -73,6 +75,7 @@ export const createOrder = async (req, res, next) => {
             .populate("salesmanId")
             .populate("lineItems.qualityId")
             .populate("lineItems.designId")
+            .populate("lineItems.factoryId")
             .populate("lineItems.matchingQuantities.matchingId");
 
         res.status(201).json(populated);
@@ -95,6 +98,7 @@ export const updateOrder = async (req, res, next) => {
             .populate("salesmanId")
             .populate("lineItems.qualityId")
             .populate("lineItems.designId")
+            .populate("lineItems.factoryId")
             .populate("lineItems.matchingQuantities.matchingId");
         if (!order) {
             return res.status(404).json({ message: "Order not found" });

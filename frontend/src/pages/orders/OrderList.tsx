@@ -62,10 +62,7 @@ export function OrderListPage() {
         // Format order details for WhatsApp
         const party = order.partyId && typeof order.partyId === "object" ? order.partyId.partyName : "";
 
-        // Use factory if available, otherwise fallback to party
-        const factory = order.factoryId && typeof order.factoryId === "object"
-            ? (order.factoryId as any).factoryName
-            : party;
+        // (Removed global factory - now showing factory per line item)
 
         // Reduced padding for mobile screens (approx 30-35 chars width)
         const pad = (str: string, length: number = 10) => str.padEnd(length, " ");
@@ -80,7 +77,7 @@ export function OrderListPage() {
 
         message += "\n◆ LINE ITEMS\n\n";
 
-        message += `  *FACTORY ${factory.toUpperCase()}*\n`;
+        // Factory will be shown per line item below
 
         let grandTotalSarees = 0;
 
@@ -90,9 +87,20 @@ export function OrderListPage() {
         order.lineItems.forEach((item, index) => {
             const quality = item.qualityId && typeof item.qualityId === "object" ? item.qualityId.fabricName : "";
             const design = item.designId && typeof item.designId === "object" ? item.designId.designNumber : "";
+
+            // Get factory for this specific line item
+            const itemFactory = item.factoryId && typeof item.factoryId === "object"
+                ? (item.factoryId as any).factoryName
+                : "";
+
             const itemName = `${quality}${design ? " - " + design : ""}`;
 
             message += `${index + 1}. ${itemName}\n`;
+
+            // Show factory for this item
+            if (itemFactory) {
+                message += `   📍 Factory: ${itemFactory.toUpperCase()}\n`;
+            }
 
             if (item.quantityType === "Taka" || item.quantityType === "Meter") {
                 const qtyUnit = item.quantityType === "Meter" ? "m" : "Taka";

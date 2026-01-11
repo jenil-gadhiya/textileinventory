@@ -117,7 +117,7 @@ export const generateInventoryPDF = async (req, res, next) => {
         const startX = 18;
         // Cols: Design (130), Matching (130), Produced (100), Ordered (100), Available (100)
         const colWidths = [130, 130, 100, 100, 100];
-        const headers = ["Design", "Matching", "Produced", "Ordered", "Available"];
+        const headers = ["Design", "Matching", "Stock", "Ordered", "Available"];
         const tableWidth = colWidths.reduce((a, b) => a + b, 0);
 
         // Title Left, Date Right (Aligned to Table)
@@ -358,7 +358,7 @@ function drawTotalsBox(doc, x, y, w, h, title, stats, type) {
     const countY = y + 50; // extra line for counts
 
     // Columns: Produced, Ordered, Available
-    const labels = ["Produced", "Ordered", "Available"];
+    const labels = ["Stock", "Ordered", "Available"];
     labels.forEach((l, i) => {
         doc.fillColor("#64748b").text(l, x + (i * colW) + 10, labelY).fillColor("#000000");
     });

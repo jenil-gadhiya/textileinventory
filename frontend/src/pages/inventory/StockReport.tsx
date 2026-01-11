@@ -286,8 +286,8 @@ export function StockReportPage() {
                                                         }}
                                                     >
                                                         <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${qualityFilter.includes(quality.id)
-                                                                ? "bg-primary border-primary"
-                                                                : "border-slate-400"
+                                                            ? "bg-primary border-primary"
+                                                            : "border-slate-400"
                                                             }`}>
                                                             {qualityFilter.includes(quality.id) && (
                                                                 <span className="text-white text-[10px]">✓</span>
@@ -355,7 +355,7 @@ export function StockReportPage() {
                                         </h4>
                                         <div className="grid grid-cols-3 gap-4 text-sm">
                                             <div>
-                                                <div className="text-xs text-muted">Produced</div>
+                                                <div className="text-xs text-muted">Stock</div>
                                                 <div className="text-body font-semibold">
                                                     {inventory
                                                         .filter(i => i.type === "Taka")
@@ -416,7 +416,7 @@ export function StockReportPage() {
                                         </h4>
                                         <div className="grid grid-cols-3 gap-4 text-sm">
                                             <div>
-                                                <div className="text-xs text-muted">Produced</div>
+                                                <div className="text-xs text-muted">Stock</div>
                                                 <div className="text-body font-semibold">
                                                     {inventory
                                                         .filter(i => i.type === "Saree")
@@ -461,7 +461,7 @@ export function StockReportPage() {
                                 { key: "matching", header: "Matching" },
                                 { key: "type", header: "Type" },
                                 { key: "cut", header: "Cut" },
-                                { key: "produced", header: "Produced" },
+                                { key: "produced", header: "Stock" },
                                 { key: "ordered", header: "Ordered" },
                                 {
                                     key: "availableDisplay" as any,
@@ -512,7 +512,7 @@ export function StockReportPage() {
                                 <h4 className="text-sm font-semibold text-body">Stock Breakdown</h4>
                                 <div className="grid grid-cols-3 gap-4 text-center">
                                     <div>
-                                        <div className="text-xs text-muted mb-1">Produced</div>
+                                        <div className="text-xs text-muted mb-1">Stock</div>
                                         <div className="text-body text-lg font-semibold">
                                             {selectedItem.type === "Taka"
                                                 ? `${selectedItem.totalMetersProduced}m`

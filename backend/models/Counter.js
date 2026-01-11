@@ -9,18 +9,12 @@ const counterSchema = new mongoose.Schema({
 export const Counter = mongoose.models.Counter || mongoose.model("Counter", counterSchema);
 
 /**
- * Generates a daily sequence number in format YYYYMMDD + Sequence
+ * Generates a simple sequence number (1, 2, 3, ...)
  * @param {string} prefix - The prefix for the counter ID (e.g., "order", "challan")
  * @returns {Promise<string>} - The generated sequence number string
  */
 export async function generateDailySequenceNumber(prefix) {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    const dateStr = `${year}${month}${day}`;
-
-    const counterId = `${prefix}_${dateStr}`;
+    const counterId = prefix; // Simple counter ID without date
 
     const counter = await Counter.findByIdAndUpdate(
         { _id: counterId },
@@ -28,5 +22,5 @@ export async function generateDailySequenceNumber(prefix) {
         { new: true, upsert: true }
     );
 
-    return `${dateStr}${counter.seq}`;
+    return `${counter.seq}`;
 }

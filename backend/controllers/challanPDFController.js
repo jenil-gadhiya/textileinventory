@@ -80,7 +80,7 @@ export const generateChallanPDF = async (req, res, next) => {
         const doc = new PDFDocument({ margin: 40, size: 'A4' });
 
         res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", `inline; filename=challan-${challan.challanNo}.pdf`);
+        res.setHeader("Content-Disposition", `attachment; filename=challan-${challan.challanNo}.pdf`);
         doc.pipe(res);
 
         // ================= HEADER =================

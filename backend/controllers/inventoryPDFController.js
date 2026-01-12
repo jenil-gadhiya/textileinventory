@@ -59,12 +59,21 @@ export const generateInventoryPDF = async (req, res, next) => {
             return json;
         });
 
-        // Filter out zero-value items (Produced, Ordered, Available all zero)
+        // Filter out items where:
+        // 1. All values are zero (Produced, Ordered, Available all zero)
+        // 2. OR design is deleted AND all values are zero
         const activeItems = processedItems.filter(item => {
-            const hasProd = (item.totalMetersProduced > 0.01) || (item.totalSareeProduced > 0);
-            const hasOrd = (item.totalMetersOrdered > 0.01) || (item.totalSareeOrdered > 0);
+            const hasProd = (item.totalMetersProduced > 0.01) || (item.totalSareeProduced > 0) || (item.totalTakaProduced > 0);
+            const hasOrd = (item.totalMetersOrdered > 0.01) || (item.totalSareeOrdered > 0) || (item.totalTakaOrdered > 0);
             // Available can be negative, so check absolute or non-zero
-            const hasAvail = (Math.abs(item.availableMeters) > 0.01) || (Math.abs(item.availableSaree) > 0);
+            const hasAvail = (Math.abs(item.availableMeters) > 0.01) || (Math.abs(item.availableSaree) > 0) || (Math.abs(item.availableTaka) > 0);
+
+            // If design exists, show if any value is non-zero
+            if (item.designId && item.designId.designNumber) {
+                return hasProd || hasOrd || hasAvail;
+            }
+
+            // Design is deleted - only show if there's any non-zero value
             return hasProd || hasOrd || hasAvail;
         });
 

@@ -71,7 +71,22 @@ export const getInventory = async (req, res, next) => {
             return dA.localeCompare(dB, undefined, { numeric: true, sensitivity: 'base' });
         });
 
-        res.json(itemsWithVirtuals);
+        // Filter out items where design is deleted AND all values are zero
+        const filteredItems = itemsWithVirtuals.filter(item => {
+            // If design exists, always show the item
+            if (item.designId && item.designId.designNumber) {
+                return true;
+            }
+
+            // Design is deleted - only show if there's any non-zero value
+            const hasStock = (item.totalMetersProduced > 0) || (item.totalSareeProduced > 0) || (item.totalTakaProduced > 0);
+            const hasOrdered = (item.totalMetersOrdered > 0) || (item.totalSareeOrdered > 0) || (item.totalTakaOrdered > 0);
+            const hasAvailable = (Math.abs(item.availableMeters) > 0) || (Math.abs(item.availableSaree) > 0) || (Math.abs(item.availableTaka) > 0);
+
+            return hasStock || hasOrdered || hasAvailable;
+        });
+
+        res.json(filteredItems);
     } catch (error) {
         next(error);
     }

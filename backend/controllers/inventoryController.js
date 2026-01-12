@@ -71,18 +71,13 @@ export const getInventory = async (req, res, next) => {
             return dA.localeCompare(dB, undefined, { numeric: true, sensitivity: 'base' });
         });
 
-        // Filter out items where design is deleted AND all values are zero
+        // Filter out items where all three columns (STOCK, ORDERED, AVAILABLE) are zero
         const filteredItems = itemsWithVirtuals.filter(item => {
-            // If design exists, always show the item
-            if (item.designId && item.designId.designNumber) {
-                return true;
-            }
-
-            // Design is deleted - only show if there's any non-zero value
             const hasStock = (item.totalMetersProduced > 0) || (item.totalSareeProduced > 0) || (item.totalTakaProduced > 0);
             const hasOrdered = (item.totalMetersOrdered > 0) || (item.totalSareeOrdered > 0) || (item.totalTakaOrdered > 0);
             const hasAvailable = (Math.abs(item.availableMeters) > 0) || (Math.abs(item.availableSaree) > 0) || (Math.abs(item.availableTaka) > 0);
 
+            // Show item if ANY of the three columns has a non-zero value
             return hasStock || hasOrdered || hasAvailable;
         });
 
